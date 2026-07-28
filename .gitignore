@@ -1,0 +1,22 @@
+# Ambiente Virtual
+.venv/
+venv/
+env/
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Banco de Dados Local
+*.db
+*.sqlite3
+arapuca.db
+
+# Configurações de Editores (VS Code, etc)
+.vscode/
+.idea/
+
+# Variáveis de Ambiente (Senhas e chaves futuras)
+.env
