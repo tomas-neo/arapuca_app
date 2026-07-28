@@ -7,6 +7,7 @@ def conectar_db():
 
 def inicializar_db():
     conn = conectar_db()
+    
     conn.execute('''
         CREATE TABLE IF NOT EXISTS mercado (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -14,9 +15,26 @@ def inicializar_db():
             quantidade INTEGER NOT NULL
         )
     ''')
-    cursor = conn.execute('SELECT COUNT(*) FROM mercado')
-    if cursor.fetchone()[0] == 0:
+    
+    # Adicionamos a coluna "hora_ligado" aqui
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS boiler (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            status TEXT NOT NULL,
+            responsavel TEXT,
+            hora_ligado TEXT
+        )
+    ''')
+    
+    cursor_mercado = conn.execute('SELECT COUNT(*) FROM mercado')
+    if cursor_mercado.fetchone()[0] == 0:
         itens_iniciais = [("Papel Higiênico", 4), ("Café", 2), ("Leite", 6), ("Sabão em Pó", 1)]
         conn.executemany('INSERT INTO mercado (item, quantidade) VALUES (?, ?)', itens_iniciais)
-        conn.commit()
+    
+    cursor_boiler = conn.execute('SELECT COUNT(*) FROM boiler')
+    if cursor_boiler.fetchone()[0] == 0:
+        # Iniciamos com a hora_ligado nula (NULL)
+        conn.execute('INSERT INTO boiler (id, status, responsavel, hora_ligado) VALUES (1, "DESLIGADO", "Ninguém", NULL)')
+        
+    conn.commit()
     conn.close()
