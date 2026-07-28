@@ -1,6 +1,7 @@
 from flask import Blueprint, request, redirect, url_for
 from database import conectar_db
 from datetime import datetime
+from estilo import renderizar_pagina # <--- A pintura aqui também!
 
 boiler_bp = Blueprint('boiler', __name__, url_prefix='/boiler')
 
@@ -17,47 +18,47 @@ def index():
     alerta_tempo = ""
     
     if status == "LIGADO":
-        # Converte a hora salva no banco para um objeto de tempo do Python
         hora_ligado = datetime.strptime(hora_ligado_str, "%Y-%m-%d %H:%M:%S")
         tempo_passado = datetime.now() - hora_ligado
         minutos = int(tempo_passado.total_seconds() / 60)
         
-        # Se bater 20 minutos, a tela berra!
         if minutos >= 20:
-            alerta_tempo = f"<h2 style='color: white; background-color: red; padding: 15px;'>🚨 DESLIGA ISSO! JÁ PASSOU DOS 20 MINUTOS ({minutos} min) 🚨</h2>"
+            alerta_tempo = f"<div style='background-color: #CC0000; padding: 10px; border-radius: 10px; color: white;'><h2>🚨 DESLIGA ISSO! ({minutos} min) 🚨</h2></div>"
         else:
-            alerta_tempo = f"<h3 style='color: orange;'>⏱️ Tempo ligado: {minutos} minuto(s)</h3>"
+            alerta_tempo = f"<h3 style='color: #FF6600;'>⏱️ Tempo ligado: {minutos} minuto(s)</h3>"
             
-        alerta = f"{alerta_tempo}<h3 style='color: red;'>⚠️ LIGADO POR: {responsavel}</h3>"
+        alerta = f"{alerta_tempo}<h3 style='color: #CC0000;'>⚠️ LIGADO POR: {responsavel}</h3>"
         botao_acao = """
         <form action="/boiler/desligar" method="POST">
-            <button type="submit" style="background-color: red; color: white; padding: 15px; font-size: 18px;">🔴 DESLIGAR BOILER</button>
+            <button type="submit" class="btn-vermelho" style="font-size: 18px; padding: 20px;">🔴 DESLIGAR BOILER</button>
         </form>
         """
     else:
-        alerta = f"<h3 style='color: green;'>✅ DESLIGADO</h3><p>Último a usar: {responsavel}</p>"
+        alerta = f"<h3 style='color: #00CC00;'>✅ DESLIGADO</h3><p style='color: #888;'>Último a usar: {responsavel}</p>"
         botao_acao = """
         <form action="/boiler/ligar" method="POST">
-            <input type="text" name="nome" placeholder="Quem é você? (ex: CJ, Patati)" required style="padding: 10px;">
-            <br><br>
-            <button type="submit" style="background-color: green; color: white; padding: 15px; font-size: 18px;">🟢 LIGAR BOILER</button>
+            <input type="text" name="nome" placeholder="Quem é você? (ex: CJ)" required>
+            <button type="submit" class="btn-verde" style="font-size: 18px; padding: 20px;">🟢 LIGAR BOILER</button>
         </form>
         """
         
-    return f"""
-    <!-- Esse comando abaixo faz a tela atualizar sozinha a cada 30 segundos -->
-    <meta http-equiv="refresh" content="30"> 
-    <h2>🛁 Controle do Boiler da Arapuca</h2>
+    conteudo = f"""
+    <h2>🛁 Controle do Boiler</h2>
     {alerta}
     <hr>
     {botao_acao}
-    <br><br><a href='/'>Voltar para o início</a>
+    <br>
+    <a href='/' class="botao-menu">Voltar para o início</a>
     """
+    
+    # O truque de atualização de tela entra aqui!
+    cabecalho_extra = '<meta http-equiv="refresh" content="30">'
+    
+    return renderizar_pagina("Boiler - Arapuca", conteudo, cabecalho_extra)
 
 @boiler_bp.route("/ligar", methods=["POST"])
 def ligar():
     nome = request.form['nome'].strip().title()
-    # Pega o exato segundo em que o botão foi clicado
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     conn = conectar_db()
