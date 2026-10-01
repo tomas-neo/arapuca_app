@@ -6,13 +6,17 @@ def renderizar_pagina(titulo, conteudo, extra_head=""):
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        
+        <!-- PWA: Configurações do App -->
+        <link rel="manifest" href="/static/manifest.json?v=2">
+        <meta name="theme-color" content="#FF6600">
+        
         <title>{titulo}</title>
         {extra_head}
         <style>
-            /* Fundo Preto Puro */
             body {{
                 background-color: #000000; 
-                color: #F5F5F5; /* Texto branco suave */
+                color: #F5F5F5;
                 font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 margin: 0;
                 padding: 20px;
@@ -27,13 +31,11 @@ def renderizar_pagina(titulo, conteudo, extra_head=""):
                 text-align: center;
             }}
 
-            /* Títulos em Laranja */
             h1, h2, h3 {{ color: #FF6600; }}
 
-            /* Botões do Menu */
             a.botao-menu {{
                 display: block;
-                background-color: #1A1A1A; /* Cinza bem escuro para dar contraste */
+                background-color: #1A1A1A;
                 color: #FFFFFF;
                 text-decoration: none;
                 padding: 20px;
@@ -41,11 +43,10 @@ def renderizar_pagina(titulo, conteudo, extra_head=""):
                 border-radius: 15px;
                 font-size: 18px;
                 font-weight: bold;
-                border-left: 5px solid #FF6600; /* Detalhe Laranja */
-                box-shadow: 0 4px 6px rgba(255, 102, 0, 0.2); /* Sombra alaranjada */
+                border-left: 5px solid #FF6600;
+                box-shadow: 0 4px 6px rgba(255, 102, 0, 0.2);
             }}
 
-            /* Botões Gerais */
             button {{
                 border: none;
                 border-radius: 12px;
@@ -57,17 +58,15 @@ def renderizar_pagina(titulo, conteudo, extra_head=""):
                 cursor: pointer;
             }}
             
-            /* Paleta de Cores dos Botões */
             .btn-laranja {{ background-color: #FF6600; color: #000; }}
             .btn-vermelho {{ background-color: #CC0000; color: #FFF; }}
             .btn-verde {{ background-color: #00CC00; color: #FFF; }}
             
-            /* Caixas de Texto */
             input {{
                 width: 90%;
                 padding: 15px;
                 border-radius: 10px;
-                border: 1px solid #FF6600; /* Borda Laranja */
+                border: 1px solid #FF6600;
                 background-color: #1A1A1A;
                 color: white;
                 font-size: 16px;
@@ -81,6 +80,18 @@ def renderizar_pagina(titulo, conteudo, extra_head=""):
         <div class="container">
             {conteudo}
         </div>
+        
+<!-- Script que contrata o Service Worker -->
+        <script>
+            if ('serviceWorker' in navigator) {{
+                navigator.serviceWorker.register('/sw.js', {{ scope: '/' }})
+                .then(function(reg) {{
+                    console.log('Service Worker registrado com sucesso:', reg.scope);
+                }}).catch(function(err) {{
+                    console.log('Falha ao registrar o Service Worker:', err);
+                }});
+            }}
+        </script>
     </body>
     </html>
     """
