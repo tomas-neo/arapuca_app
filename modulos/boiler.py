@@ -23,32 +23,32 @@ def index():
         minutos = int(tempo_passado.total_seconds() / 60)
         
         if minutos >= 20:
-            alerta_tempo = f"<div style='background-color: #CC0000; padding: 10px; border-radius: 10px; color: white;'><h2>🚨 DESLIGA ISSO! ({minutos} min) 🚨</h2></div>"
+            alerta = f"<div class='alerta alerta-critico'><h2>🚨 DESLIGA ISSO! ({minutos} min) 🚨</h2></div>"
         else:
-            alerta_tempo = f"<h3 style='color: #FF6600;'>⏱️ Tempo ligado: {minutos} minuto(s)</h3>"
-            
-        alerta = f"{alerta_tempo}<h3 style='color: #CC0000;'>⚠️ LIGADO POR: {responsavel}</h3>"
+            alerta = f"<div class='alerta alerta-ok'><h3>⏱️ Tempo ligado: {minutos} minuto(s)</h3></div>"
+
+        alerta += f"<p style='text-align:center;'>⚠️ Ligado por: <strong>{responsavel}</strong></p>"
         botao_acao = """
         <form action="/boiler/desligar" method="POST">
-            <button type="submit" class="btn-vermelho" style="font-size: 18px; padding: 20px;">🔴 DESLIGAR BOILER</button>
+            <button type="submit" class="btn-vermelho">🔴 DESLIGAR BOILER</button>
         </form>
         """
     else:
-        alerta = f"<h3 style='color: #00CC00;'>✅ DESLIGADO</h3><p style='color: #888;'>Último a usar: {responsavel}</p>"
+        alerta = f"<div class='alerta alerta-ok'><h3>✅ DESLIGADO</h3><p>Último a usar: {responsavel}</p></div>"
         botao_acao = """
         <form action="/boiler/ligar" method="POST">
-            <input type="text" name="nome" placeholder="Quem é você? (ex: CJ)" required>
-            <button type="submit" class="btn-verde" style="font-size: 18px; padding: 20px;">🟢 LIGAR BOILER</button>
+            <input type="text" name="nome" placeholder="Quem é você? (ex: CJ)" required style="margin-bottom: 10px;">
+            <button type="submit" class="btn-verde">🟢 LIGAR BOILER</button>
         </form>
         """
-        
+
     conteudo = f"""
     <h2>🛁 Controle do Boiler</h2>
-    {alerta}
-    <hr>
-    {botao_acao}
-    <br>
-    <a href='/' class="botao-menu">Voltar para o início</a>
+    <div class="card">
+        {alerta}
+        {botao_acao}
+    </div>
+    <a href='/' class="botao-menu">🏠 Voltar para o início</a>
     """
     
     # O truque de atualização de tela entra aqui!

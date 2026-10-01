@@ -29,16 +29,16 @@ def index():
     html_itens = ""
     for row in itens:
         html_itens += f"""
-        <li style="margin-bottom: 15px; list-style-type: none; background-color: #1A1A1A; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #ff6600;">
-            <span style="font-size: 18px;"><strong>{row['item']}</strong> (Qtd: {row['quantidade']})</span>
-            <form action="/mercado/diminuir/{row['id']}" method="POST" style="margin: 0;">
-                <button type="submit" class="btn-vermelho" style="padding: 10px 15px; margin: 0; font-weight: bold; border-radius: 5px; background-color: #b71c1c; color: white; border: none; cursor: pointer;">📉 Usar 1</button>
+        <li class="item-row">
+            <span><strong>{row['item']}</strong> (Qtd: {row['quantidade']})</span>
+            <form action="/mercado/diminuir/{row['id']}" method="POST">
+                <button type="submit" class="btn-vermelho">📉 Usar 1</button>
             </form>
         </li>
         """
-        
+
     if not html_itens:
-        html_itens = "<p style='text-align: center; color: #888; font-size: 18px;'>O estoque está vazio! Faça as compras.</p>"
+        html_itens = "<p class='estoque-vazio'>O estoque está vazio! Faça as compras.</p>"
 
     # 2. Monta as opções do Menu Dropdown
     opcoes_dropdown = ""
@@ -48,33 +48,29 @@ def index():
     # 3. Junta tudo em um Painel de Controle unificado e elegante
     conteudo = f"""
     <h2>🛒 Controle do Mercado</h2>
-    
-    <!-- CAIXA 1: DAR ENTRADA (O formulário gigante) -->
-    <div style="background-color: #111; padding: 25px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #333; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);">
-        <h3 style="color: #ff6600; text-align: center; margin-top: 0; margin-bottom: 20px;">➕ Dar Entrada</h3>
-        
-        <form action="/mercado/adicionar" method="POST" style="display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap;">
-            <select name="item" required style="flex: 2; min-width: 220px; padding: 15px; border-radius: 8px; background-color: #222; color: white; border: 1px solid #444; font-size: 18px;">
+
+    <div class="card">
+        <h3>➕ Dar Entrada</h3>
+        <form action="/mercado/adicionar" method="POST" class="form-row">
+            <select name="item" required style="flex: 2; min-width: 220px;">
                 <option value="" disabled selected>Selecione um item da planilha...</option>
                 {opcoes_dropdown}
             </select>
-            
-            <input type="number" name="quantidade" placeholder="Qtd" value="1" min="1" required style="flex: 0.5; min-width: 90px; padding: 15px; border-radius: 8px; background-color: #222; color: white; border: 2px solid #ff6600; text-align: center; font-size: 22px; font-weight: bold;">
-            
-            <button type="submit" class="btn-laranja" style="flex: 1; min-width: 140px; padding: 15px; font-size: 18px; margin-top: 0; font-weight: bold;">Adicionar</button>
+
+            <input type="number" name="quantidade" placeholder="Qtd" value="1" min="1" required style="flex: 0.5; min-width: 90px; text-align: center; font-weight: bold;">
+
+            <button type="submit" class="btn-laranja" style="flex: 1; min-width: 140px;">Adicionar</button>
         </form>
     </div>
 
-    <!-- CAIXA 2: O ESTOQUE ATUAL -->
-    <div style="background-color: #111; padding: 25px; border-radius: 12px; border: 1px solid #333; box-shadow: 0px 4px 10px rgba(0,0,0,0.5);">
-        <h3 style="color: #ff6600; text-align: center; margin-top: 0; margin-bottom: 20px;">📦 Estoque da República</h3>
-        <ul style="padding: 0; text-align: left; margin: 0;">
+    <div class="card">
+        <h3>📦 Estoque da República</h3>
+        <ul style="padding: 0; margin: 0;">
             {html_itens}
         </ul>
     </div>
-    
-    <br><br>
-    <a href='/' class="botao-menu" style="display: block; width: 50%; margin: 0 auto; text-align: center;">🏠 Voltar para o Menu Principal</a>
+
+    <a href='/' class="botao-menu">🏠 Voltar para o Menu Principal</a>
     """
     
     return renderizar_pagina("Mercado - Arapuca", conteudo)
