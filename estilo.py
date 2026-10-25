@@ -1,5 +1,9 @@
+from markupsafe import escape
+
+
 def renderizar_pagina(titulo, conteudo, extra_head=""):
     """Função que envelopa o conteúdo em um layout moderno de App (Tema Laranja e Preto)"""
+    titulo = escape(titulo)
     return f"""
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -8,7 +12,8 @@ def renderizar_pagina(titulo, conteudo, extra_head=""):
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
         <!-- PWA: Configurações do App -->
-        <link rel="manifest" href="/static/manifest.json?v=2">
+        <link rel="manifest" href="/static/manifest.json?v=3">
+        <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
         <meta name="theme-color" content="#FF6600">
 
         <link rel="preconnect" href="https://fonts.googleapis.com">

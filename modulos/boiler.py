@@ -1,4 +1,5 @@
-from flask import Blueprint, request, redirect, url_for
+from flask import Blueprint, g, redirect, url_for
+from markupsafe import escape
 from database import conectar_db
 from datetime import datetime
 from estilo import renderizar_pagina # <--- A pintura aqui também!
@@ -12,7 +13,7 @@ def index():
     conn.close()
     
     status = boiler_info['status']
-    responsavel = boiler_info['responsavel']
+    responsavel = escape(boiler_info['responsavel'])
     hora_ligado_str = boiler_info['hora_ligado']
     
     alerta_tempo = ""
@@ -37,7 +38,6 @@ def index():
         alerta = f"<div class='alerta alerta-ok'><h3>✅ DESLIGADO</h3><p>Último a usar: {responsavel}</p></div>"
         botao_acao = """
         <form action="/boiler/ligar" method="POST">
-            <input type="text" name="nome" placeholder="Quem é você? (ex: CJ)" required style="margin-bottom: 10px;">
             <button type="submit" class="btn-verde">🟢 LIGAR BOILER</button>
         </form>
         """
@@ -58,7 +58,7 @@ def index():
 
 @boiler_bp.route("/ligar", methods=["POST"])
 def ligar():
-    nome = request.form['nome'].strip().title()
+    nome = g.morador['apelido']
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     conn = conectar_db()

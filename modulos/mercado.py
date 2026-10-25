@@ -1,6 +1,7 @@
 from flask import Blueprint, request, redirect, url_for
 from database import conectar_db
 from estilo import renderizar_pagina
+from markupsafe import escape
 
 mercado_bp = Blueprint('mercado', __name__, url_prefix='/mercado')
 
@@ -30,7 +31,7 @@ def index():
     for row in itens:
         html_itens += f"""
         <li class="item-row">
-            <span><strong>{row['item']}</strong> (Qtd: {row['quantidade']})</span>
+            <span><strong>{escape(row['item'])}</strong> (Qtd: {row['quantidade']})</span>
             <form action="/mercado/diminuir/{row['id']}" method="POST">
                 <button type="submit" class="btn-vermelho">📉 Usar 1</button>
             </form>
