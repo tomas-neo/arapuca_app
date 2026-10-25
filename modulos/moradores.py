@@ -14,7 +14,7 @@ moradores_bp = Blueprint('moradores', __name__, url_prefix='/moradores')
 def index():
     erro = request.args.get('erro', '')
     conn = conectar_db()
-    moradores = conn.execute('SELECT id, apelido, admin, ativo FROM moradores ORDER BY ativo DESC, apelido').fetchall()
+    moradores = conn.execute('SELECT id, apelido, admin, ativo, peso FROM moradores ORDER BY ativo DESC, apelido').fetchall()
     conn.close()
 
     return render_template("moradores.html", moradores=moradores, erro=erro)
@@ -52,4 +52,20 @@ def alternar_ativo(morador_id):
         conn.execute('UPDATE moradores SET ativo = 1 - ativo WHERE id = ?', (morador_id,))
         conn.commit()
         conn.close()
+    return redirect(url_for('moradores.index'))
+
+
+@moradores_bp.route("/<int:morador_id>/peso", methods=["POST"])
+@somente_admin
+def mudar_peso(morador_id):
+    try:
+        peso = float(request.form.get('peso', '').replace(',', '.'))
+    except ValueError:
+        peso = -1
+    if not 0 < peso <= 10:
+        return redirect(url_for('moradores.index', erro="Peso precisa ser um número entre 0 e 10 (ex: 1 ou 1,5)"))
+    conn = conectar_db()
+    conn.execute('UPDATE moradores SET peso = ? WHERE id = ?', (peso, morador_id))
+    conn.commit()
+    conn.close()
     return redirect(url_for('moradores.index'))

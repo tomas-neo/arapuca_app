@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "_macros.html" import erro as mostrar_erro, voltar %}
+{% block titulo %}Contas da casa{% endblock %}
+{% block conteudo %}
+<h2>💸 Contas e aluguel</h2>
+
+<div class="form-row navegar-mes">
+    <a href="{{ url_for('contas.index', mes=anterior) }}" class="botao-mes">◀</a>
+    <strong>{{ nome_mes }}</strong>
+    <a href="{{ url_for('contas.index', mes=proximo) }}" class="botao-mes">▶</a>
+</div>
+
+{% if minha_parte %}
+<div class="card destaque">
+    <p class="centro">Sua parte em {{ nome_mes|lower }}</p>
+    <h1 class="centro valor-grande">{{ minha_parte.valor_centavos|reais }}</h1>
+    {% if fechado %}
+    <p class="centro">{% if minha_parte.pago %}✅ Pago{% else %}⏳ Ainda não pago{% endif %}</p>
+    {% else %}
+    <p class="centro dica">Prévia: o valor pode mudar até o mês ser fechado.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>🧾 Contas do mês</h3>
+    {{ mostrar_erro(erro) }}
+    <ul class="lista">
+    {% for c in contas %}
+        <li class="item-row">
+            <span>{{ c.descricao }} <strong>{{ c.valor_centavos|reais }}</strong></span>
+            {% if g.morador.admin and not fechado %}
+            <form action="{{ url_for('contas.apagar', conta_id=c.id, mes=mes) }}" method="POST">
+                <button type="submit" class="btn-vermelho" title="Apagar">🗑️</button>
+            </form>
+            {% endif %}
+        </li>
+    {% else %}
+        <p class="estoque-vazio">Nenhuma conta lançada nesse mês.</p>
+    {% endfor %}
+    </ul>
+    {% if contas %}<p class="total">Total: <strong>{{ total|reais }}</strong></p>{% endif %}
+
+    {% if g.morador.admin and not fechado %}
+    <hr>
+    <form action="{{ url_for('contas.nova', mes=mes) }}" method="POST" class="form-row">
+        <input type="text" name="descricao" placeholder="Ex: Aluguel, Luz, Internet" required maxlength="60" style="flex: 2; min-width: 180px;">
+        <input type="text" name="valor" inputmode="decimal" placeholder="R$ 0,00" required style="flex: 1; min-width: 110px;">
+        <button type="submit" class="btn-laranja">Lançar conta</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>👥 Quanto cada um paga</h3>
+    {% if not divisao %}
+    <p class="estoque-vazio">Nenhum morador ativo.</p>
+    {% endif %}
+    <ul class="lista">
+    {% for d in divisao %}
+        <li class="item-row">
+            <span>
+                <strong>{{ d.apelido }}</strong>
+                {% if d.peso != 1 %}<em class="apagado dica">(peso {{ ('%g'|format(d.peso)).replace('.', ',') }})</em>{% endif %}
+                {{ d.valor_centavos|reais }}
+            </span>
+            {% if fechado %}
+                {% if g.morador.admin %}
+                <form action="{{ url_for('contas.marcar_pago', morador_id=d.morador_id, mes=mes) }}" method="POST">
+                    {% if d.pago %}
+                    <button type="submit" class="btn-verde">✅ Pago</button>
+                    {% else %}
+                    <button type="submit" class="btn-vermelho">Marcar pago</button>
+                    {% endif %}
+                </form>
+                {% else %}
+                <span>{% if d.pago %}✅{% else %}⏳{% endif %}</span>
+                {% endif %}
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+
+    {% if g.morador.admin %}
+    <hr>
+    {% if fechado %}
+    <form action="{{ url_for('contas.reabrir', mes=mes) }}" method="POST"
+          onsubmit="return confirm('Reabrir apaga a divisão e quem já pagou. Continuar?');">
+        <button type="submit" class="btn-vermelho">Reabrir o mês</button>
+    </form>
+    {% else %}
+    <form action="{{ url_for('contas.fechar', mes=mes) }}" method="POST">
+        <button type="submit" class="btn-laranja">🔒 Fechar o mês e congelar a divisão</button>
+    </form>
+    <p class="dica">Fechar guarda quem estava na casa e os pesos de agora. Depois dá pra marcar quem já pagou.</p>
+    {% endif %}
+    {% endif %}
+</div>
+
+{{ voltar() }}
+{% endblock %}

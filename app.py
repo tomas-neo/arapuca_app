@@ -12,6 +12,7 @@ from werkzeug.security import generate_password_hash
 from database import conectar_db, inicializar_db
 from modulos.auth import auth_bp
 from modulos.boiler import boiler_bp
+from modulos.contas import contas_bp
 from modulos.mercado import mercado_bp
 from modulos.moradores import moradores_bp
 
@@ -41,6 +42,7 @@ inicializar_db()
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(moradores_bp)
+app.register_blueprint(contas_bp)
 app.register_blueprint(mercado_bp)
 app.register_blueprint(boiler_bp)
 
