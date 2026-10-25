@@ -450,3 +450,6 @@ details.card > summary::-webkit-details-marker { display: none; }
 .item-row.quebra .item-titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item-row.quebra .peso-form { flex: 0 1 128px; min-width: 0; }
 .item-row.quebra .peso-form select { width: 100%; }
+.cargos-form { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 10px 0 0; }
+.cargos-form .checkbox { margin: 0; font-size: 14px; }
+.cargos-form button { margin-left: auto; }

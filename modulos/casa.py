@@ -1,7 +1,7 @@
 """Dados de quem mora na casa que não ficam no GitHub (o repositório é público).
 
 Pasta `dados_iniciais/` ao lado do app (fica fora do git):
-    moradores.json   {"Oca": {"ano": 2025, "saldo": -824.99, "nomes": ["Cabeça Oca"]}, ...}
+    moradores.json   {"Oca": {"ano": 2025, "saldo": -824.99, "nomes": ["Cabeça Oca"], "cargos": ["mercado"]}, ...}
     fotos/Oca.jpg    foto de cada um, com o apelido no nome do arquivo
 
 Ao iniciar o app e ao criar um morador, cada um recebe o ano, o saldo da planilha
@@ -67,7 +67,7 @@ def importar(conn, pasta=None):
     pasta = Path(pasta or PASTA_DADOS)
     dados = carregar_dados(pasta)
     mudou = 0
-    for m in conn.execute('SELECT id, apelido, ano, saldo_anterior_centavos, foto_versao FROM moradores').fetchall():
+    for m in conn.execute('SELECT id, apelido, ano, saldo_anterior_centavos, foto_versao, cargos FROM moradores').fetchall():
         info = dados.get(normalizar(m['apelido']))
         if not info:
             continue
@@ -77,6 +77,11 @@ def importar(conn, pasta=None):
         if m['saldo_anterior_centavos'] is None and isinstance(info.get("saldo"), (int, float)):
             conn.execute('UPDATE moradores SET saldo_anterior_centavos = ? WHERE id = ?',
                          (round(info["saldo"] * 100), m['id']))
+            mudou += 1
+        if m['cargos'] is None and isinstance(info.get("cargos"), list):
+            from modulos.auth import CARGOS
+            cargos = [c for c in info["cargos"] if c in CARGOS]
+            conn.execute('UPDATE moradores SET cargos = ? WHERE id = ?', (",".join(cargos), m['id']))
             mudou += 1
         if not m['foto_versao']:
             origem = achar_foto(pasta, [info["apelido"], m['apelido'], *info.get("nomes", [])])

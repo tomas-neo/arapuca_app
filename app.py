@@ -10,7 +10,7 @@ from flask import Flask, g, render_template, send_from_directory
 from werkzeug.security import generate_password_hash
 
 from database import conectar_db, inicializar_db
-from modulos.auth import auth_bp
+from modulos.auth import CARGOS, auth_bp, pode
 from modulos.azaralho import azaralho_bp, meus_pontos_do_mes
 from modulos.boiler import boiler_bp
 from modulos.contas import contas_bp
@@ -52,7 +52,7 @@ casa.importar(_conn)  # ano, saldo da planilha e fotos de dados_iniciais/ (fora 
 _conn.close()
 app.jinja_env.filters['qtd'] = formatar_qtd
 app.jinja_env.filters['ano'] = casa.formatar_ano
-app.jinja_env.globals.update(avatar=avatar, icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
+app.jinja_env.globals.update(pode=pode, cargos_nomes=CARGOS, avatar=avatar, icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(moradores_bp)
@@ -79,7 +79,7 @@ def home():
 @app.cli.command("criar-admin")
 @click.argument("apelido")
 def criar_admin(apelido):
-    """Cria um morador admin. Uso: flask --app app criar-admin Oca"""
+    """Cria um morador root (acesso total). Uso: flask --app app criar-admin Oca"""
     senha = getpass.getpass("Senha: ")
     if len(senha) < 6:
         raise click.ClickException("A senha precisa de 6 caracteres ou mais")
@@ -97,7 +97,7 @@ def criar_admin(apelido):
         raise click.ClickException(f"Já existe um morador chamado {apelido}")
     finally:
         conn.close()
-    click.echo(f"Admin {apelido} criado. Agora é só entrar pelo app.")
+    click.echo(f"Root {apelido} criado. Agora é só entrar pelo app.")
 
 
 if __name__ == "__main__":

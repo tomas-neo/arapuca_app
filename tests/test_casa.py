@@ -20,7 +20,7 @@ def app(tmp_path, monkeypatch):
     (pasta / "fotos").mkdir(parents=True)
     (pasta / "moradores.json").write_text(json.dumps({
         "Oca": {"ano": 2025, "saldo": -824.99, "nomes": ["Cabeça Oca"]},
-        "Mictorio": {"ano": 2024, "saldo": -1019.27, "nomes": ["Mic"]},
+        "Mictorio": {"ano": 2024, "saldo": -1019.27, "nomes": ["Mic"], "cargos": ["mercado", "xyz"]},
         "Xama": {"ano": 2022, "saldo": 9.5, "nomes": ["Xamã"]},
     }), encoding="utf-8")
     Image.new("RGB", (600, 400), "orange").save(pasta / "fotos" / "Oca.png")
@@ -59,6 +59,7 @@ def test_importa_ano_saldo_e_foto(app):
     oca, mic = morador("Oca"), morador("Mic")
     assert oca["ano"] == 2025 and oca["saldo_anterior_centavos"] == -82499 and oca["foto_versao"]
     assert mic["ano"] == 2024 and mic["saldo_anterior_centavos"] == -101927 and not mic["foto_versao"]
+    assert mic["cargos"] == "mercado" and oca["cargos"] is None
     with Image.open(f"fotos/{oca['id']}.jpg") as foto:
         assert foto.size == (320, 320)
 

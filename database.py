@@ -80,6 +80,10 @@ def inicializar_db():
         conn.execute('ALTER TABLE moradores ADD COLUMN ano INTEGER')
     if 'saldo_anterior_centavos' not in colunas:
         conn.execute('ALTER TABLE moradores ADD COLUMN saldo_anterior_centavos INTEGER')
+    # Cargos dados pelo root (admin = root, acesso total): "financeiro,mercado,estrutura".
+    # NULL = nunca definido (dados_iniciais/ pode preencher); '' = sem cargo.
+    if 'cargos' not in colunas:
+        conn.execute('ALTER TABLE moradores ADD COLUMN cargos TEXT')
 
     # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento).
     # tipo: 'aluguel' (vai metade área comum, metade quartos) ou 'despesa' (igual por vaga)

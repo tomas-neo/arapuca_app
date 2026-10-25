@@ -5,7 +5,7 @@ from datetime import date
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
 from database import conectar_db
-from modulos.auth import somente_admin
+from modulos.auth import exigir_cargo
 
 contas_bp = Blueprint('contas', __name__, url_prefix='/contas')
 
@@ -232,7 +232,7 @@ def bloquear_se_fechado(conn, mes):
 
 
 @contas_bp.route("/nova", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def nova():
     mes = mes_da_url()
     descricao = request.form.get("descricao", "").strip()
@@ -256,7 +256,7 @@ def nova():
 
 
 @contas_bp.route("/<int:conta_id>/apagar", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def apagar(conta_id):
     mes = mes_da_url()
     conn = conectar_db()
@@ -269,7 +269,7 @@ def apagar(conta_id):
 
 
 @contas_bp.route("/ajuste", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def novo_ajuste():
     mes = mes_da_url()
     tipo = request.form.get("tipo", "")
@@ -295,7 +295,7 @@ def novo_ajuste():
 
 
 @contas_bp.route("/ajuste/<int:ajuste_id>/apagar", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def apagar_ajuste(ajuste_id):
     mes = mes_da_url()
     conn = conectar_db()
@@ -308,7 +308,7 @@ def apagar_ajuste(ajuste_id):
 
 
 @contas_bp.route("/fechar", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def fechar():
     """Congela a divisão do mês com os quartos, moradores e valores de agora."""
     mes = mes_da_url()
@@ -330,7 +330,7 @@ def fechar():
 
 
 @contas_bp.route("/reabrir", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def reabrir():
     mes = mes_da_url()
     conn = conectar_db()
@@ -341,7 +341,7 @@ def reabrir():
 
 
 @contas_bp.route("/pagamento/<int:vaga>", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def registrar_pagamento(vaga):
     """Guarda quanto o morador daquela vaga pagou no mês (vazio ou 'tudo' = valor cheio)."""
     mes = mes_da_url()

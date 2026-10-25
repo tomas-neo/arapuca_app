@@ -13,13 +13,35 @@ auth_bp = Blueprint('auth', __name__)
 ROTAS_PUBLICAS = {'auth.login', 'static', 'service_worker'}
 
 
+# Cargos que o root distribui. O root (coluna admin) pode tudo.
+CARGOS = {
+    "financeiro": "Financeiro",
+    "mercado": "Mercado",
+    "estrutura": "Estrutura",
+}
+
+
+def ler_cargos(texto):
+    return [c for c in (texto or "").split(",") if c in CARGOS]
+
+
 def buscar_morador(morador_id):
     conn = conectar_db()
-    morador = conn.execute(
-        'SELECT id, apelido, admin, foto_versao, ano FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
+    linha = conn.execute(
+        'SELECT id, apelido, admin, foto_versao, ano, cargos FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
     ).fetchone()
     conn.close()
+    if linha is None:
+        return None
+    morador = dict(linha)
+    morador['cargos'] = ler_cargos(linha['cargos'])
     return morador
+
+
+def pode(cargo):
+    """Root pode tudo; os outros só o que o cargo deles permite."""
+    m = g.get('morador')
+    return bool(m) and (bool(m['admin']) or cargo in m['cargos'])
 
 
 @auth_bp.before_app_request
@@ -37,12 +59,25 @@ def exigir_login():
 
 
 def somente_admin(view):
+    """Só o root (admin geral)."""
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not g.morador or not g.morador['admin']:
             return render_template("sem_permissao.html"), 403
         return view(*args, **kwargs)
     return wrapper
+
+
+def exigir_cargo(cargo):
+    """Root ou quem tem o cargo."""
+    def decorador(view):
+        @wraps(view)
+        def wrapper(*args, **kwargs):
+            if not pode(cargo):
+                return render_template("sem_permissao.html", cargo=CARGOS.get(cargo)), 403
+            return view(*args, **kwargs)
+        return wrapper
+    return decorador
 
 
 def destino_seguro(proximo):
