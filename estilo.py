@@ -1,5 +1,9 @@
+from markupsafe import escape
+
+
 def renderizar_pagina(titulo, conteudo, extra_head=""):
     """Função que envelopa o conteúdo em um layout moderno de App (Tema Laranja e Preto)"""
+    titulo = escape(titulo)
     return f"""
     <!DOCTYPE html>
     <html lang="pt-BR">

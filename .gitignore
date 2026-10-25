@@ -20,3 +20,6 @@ arapuca.db
 
 # Variáveis de Ambiente (Senhas e chaves futuras)
 .env
+
+# Chave secreta das sessões (gerada no primeiro start)
+.secret_key

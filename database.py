@@ -26,6 +26,17 @@ def inicializar_db():
         )
     ''')
     
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS moradores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            apelido TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            senha_hash TEXT NOT NULL,
+            admin INTEGER NOT NULL DEFAULT 0,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     cursor_mercado = conn.execute('SELECT COUNT(*) FROM mercado')
     if cursor_mercado.fetchone()[0] == 0:
         itens_iniciais = [("Papel Higiênico", 4), ("Café", 2), ("Leite", 6), ("Sabão em Pó", 1)]
