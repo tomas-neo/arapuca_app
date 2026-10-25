@@ -10,6 +10,12 @@
 </nav>
 {% endblock %}
 
+{% macro seletor_item(itens) %}
+<div class="seletor" style="flex: 1; min-width: 0;">
+    <select name="item_id" required style="width: 100%;" aria-label="Item">{{ opcoes_itens(itens) }}</select>
+</div>
+{% endmacro %}
+
 {% macro opcoes_itens(itens) %}
 <option value="" disabled selected>Item...</option>
 {% for local, lista in grupos.items() %}
@@ -47,6 +53,15 @@
 {% if ok %}<div class="alerta alerta-ok">{{ icone('certo') }}<p>{{ ok }}</p></div>{% endif %}
 
 {% if aba == 'estoque' %}
+    <div class="card">
+        <h3>{{ icone('menos') }} Usar</h3>
+        <form action="{{ url_for('mercado.usar_escolhido') }}" method="POST" class="form-row form-busca">
+            {{ seletor_item(itens) }}
+            <input type="text" name="qtd" inputmode="decimal" value="1" aria-label="Quantidade" style="flex: 0 0 64px; text-align: center;">
+            <button type="submit" class="btn-laranja btn-pequeno">Usar</button>
+        </form>
+    </div>
+
     {% if faltando %}
     <div class="card">
         <h3>{{ icone('carrinho') }} Pra comprar <span class="etiqueta etiqueta-perigo" style="margin-left: auto;">{{ faltando|length }}</span></h3>
@@ -58,14 +73,6 @@
     </div>
     {% endif %}
 
-    <div class="card">
-        <h3>{{ icone('menos') }} Usar</h3>
-        <form action="{{ url_for('mercado.usar_escolhido') }}" method="POST" class="form-row">
-            <select name="item_id" required style="flex: 1; min-width: 0;" aria-label="Item">{{ opcoes_itens(itens) }}</select>
-            <input type="text" name="qtd" inputmode="decimal" value="1" aria-label="Quantidade" style="flex: 0 0 64px; text-align: center;">
-            <button type="submit" class="btn-laranja btn-pequeno">Usar</button>
-        </form>
-    </div>
 
     {% for local, lista in grupos.items() %}
     <div class="card">
@@ -155,8 +162,8 @@
         <h3>{{ icone('mais') }} Repor</h3>
         <form action="{{ url_for('mercado.reposicao') }}" method="POST" id="form-repor">
             <div id="linhas-repor">
-                <div class="form-row linha-repor">
-                    <select name="item_id" required style="flex: 1; min-width: 0;" aria-label="Item">{{ opcoes_itens(itens) }}</select>
+                <div class="form-row form-busca linha-repor">
+                    {{ seletor_item(itens) }}
                     <input type="text" name="qtd" inputmode="decimal" placeholder="Qtd" required aria-label="Quantidade" style="flex: 0 0 72px; text-align: center;">
                 </div>
             </div>
@@ -176,13 +183,105 @@ function preencherPadrao() {
         if (!campo.value && campo.dataset.padrao) { campo.value = campo.dataset.padrao; }
     });
 }
+var ITENS = {{ busca|tojson }};
+var modeloRepor = null;
+
+function semAcento(t) {
+    return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+// Troca o <select> por uma busca: digita, toca no item, pronto.
+function ligarBusca(seletor) {
+    var select = seletor.querySelector('select');
+    if (!select) { return; }
+    var oculto = document.createElement('input');
+    oculto.type = 'hidden'; oculto.name = 'item_id';
+    var caixa = document.createElement('div');
+    caixa.className = 'busca';
+    caixa.innerHTML = '{{ icone("lupa") }}';
+    var campo = document.createElement('input');
+    campo.type = 'search'; campo.placeholder = 'Buscar item...'; campo.autocomplete = 'off';
+    campo.setAttribute('aria-label', 'Buscar item');
+    caixa.appendChild(campo);
+    var lista = document.createElement('ul');
+    lista.className = 'resultados'; lista.hidden = true;
+    select.replaceWith(oculto);
+    seletor.appendChild(caixa);
+    seletor.appendChild(lista);
+
+    function achados() {
+        var q = semAcento(campo.value.trim());
+        if (!q) { return []; }
+        var comeca = [], contem = [];
+        ITENS.forEach(function (i) {
+            var n = semAcento(i.nome);
+            if (n.indexOf(q) === 0) { comeca.push(i); } else if (n.indexOf(q) > 0) { contem.push(i); }
+        });
+        return comeca.concat(contem).slice(0, 8);
+    }
+    function escolher(item) {
+        oculto.value = item.id;
+        campo.value = item.nome + ' (' + item.unidade + ')';
+        lista.hidden = true;
+        var qtd = seletor.parentElement.querySelector('input[name=qtd]');
+        if (qtd) { qtd.focus(); qtd.select(); }
+    }
+    function mostrar() {
+        var r = achados();
+        lista.innerHTML = '';
+        r.forEach(function (item) {
+            var li = document.createElement('li');
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.innerHTML = '<span></span><small></small>';
+            b.firstChild.textContent = item.nome;
+            b.lastChild.textContent = item.estoque + ' ' + item.unidade + ' em casa';
+            b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+            b.addEventListener('click', function () { escolher(item); });
+            li.appendChild(b);
+            lista.appendChild(li);
+        });
+        if (!r.length && campo.value.trim()) {
+            lista.innerHTML = '<li><button type="button" disabled>Nenhum item com esse nome</button></li>';
+        }
+        lista.hidden = !campo.value.trim();
+    }
+    campo.addEventListener('input', function () { oculto.value = ''; mostrar(); });
+    campo.addEventListener('focus', function () { if (!oculto.value) { mostrar(); } });
+    campo.addEventListener('blur', function () { lista.hidden = true; });
+    campo.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !oculto.value) {
+            e.preventDefault();
+            var r = achados();
+            if (r.length) { escolher(r[0]); }
+        }
+    });
+    seletor.closest('form').addEventListener('submit', function (e) {
+        if (!oculto.value) {
+            var r = achados();
+            if (r.length === 1) { escolher(r[0]); return; }
+            e.preventDefault();
+            campo.focus();
+            campo.setCustomValidity('Escolha um item da lista');
+            campo.reportValidity();
+            setTimeout(function () { campo.setCustomValidity(''); }, 1500);
+        }
+    });
+}
+
 function maisUmItem() {
     var linhas = document.getElementById('linhas-repor');
-    if (linhas.children.length >= 10) { return; }
-    var nova = linhas.firstElementChild.cloneNode(true);
-    nova.querySelector('select').selectedIndex = 0;
-    nova.querySelector('input').value = '';
+    if (!modeloRepor || linhas.children.length >= 10) { return; }
+    var nova = modeloRepor.cloneNode(true);
     linhas.appendChild(nova);
+    ligarBusca(nova.querySelector('.seletor'));
+    nova.querySelector('input[type=search]').focus();
 }
+
+(function () {
+    var primeira = document.querySelector('#linhas-repor .linha-repor');
+    if (primeira) { modeloRepor = primeira.cloneNode(true); }
+    document.querySelectorAll('.seletor').forEach(ligarBusca);
+})();
 </script>
 {% endblock %}

@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=10">
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=11">
 
     <title>{% block titulo %}Arapuca{% endblock %}</title>
     {% block head %}{% endblock %}
@@ -28,12 +28,14 @@
             <a href="{{ url_for('home') }}" class="topo-botao" aria-label="Voltar ao início">{{ icone('voltar') }}</a>
             {% endif %}
             <span class="topo-marca">Arapuca</span>
-            {% if g.morador %}
+            {% if g.morador and request.endpoint != 'home' %}
             <a href="{{ url_for('auth.trocar_senha') }}" class="avatar" aria-label="Seu perfil">{{ avatar(g.morador.id, g.morador.apelido, g.morador.foto_versao) }}</a>
             {% endif %}
         </div>
+        {% block topo_corpo %}
         <p class="topo-sub">{% block subtitulo %}{% endblock %}</p>
         <h1 class="topo-titulo">{% block titulo_topo %}{{ self.titulo() }}{% endblock %}</h1>
+        {% endblock %}
         {% block topo_extra %}{% endblock %}
     </header>
     {% endblock %}

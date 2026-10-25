@@ -26,3 +26,6 @@ arapuca.db
 
 # Fotos de perfil dos moradores
 fotos/
+
+# Fotos, anos e saldos de cada morador (repositório é público)
+dados_iniciais/

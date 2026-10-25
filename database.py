@@ -73,6 +73,14 @@ def inicializar_db():
     if 'foto_versao' not in [c['name'] for c in conn.execute('PRAGMA table_info(moradores)')]:
         conn.execute('ALTER TABLE moradores ADD COLUMN foto_versao INTEGER NOT NULL DEFAULT 0')
 
+    # Ano em que entrou na casa (turma: 2022 aparece como "022") e saldo que veio da planilha
+    # Financeiro (aba Créditos) antes do app. saldo NULL = ainda não importado; negativo = deve à rep.
+    colunas = [c['name'] for c in conn.execute('PRAGMA table_info(moradores)')]
+    if 'ano' not in colunas:
+        conn.execute('ALTER TABLE moradores ADD COLUMN ano INTEGER')
+    if 'saldo_anterior_centavos' not in colunas:
+        conn.execute('ALTER TABLE moradores ADD COLUMN saldo_anterior_centavos INTEGER')
+
     # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento).
     # tipo: 'aluguel' (vai metade área comum, metade quartos) ou 'despesa' (igual por vaga)
     conn.execute('''
