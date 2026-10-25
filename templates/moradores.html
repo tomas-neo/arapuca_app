@@ -13,6 +13,7 @@
         <button type="submit" class="btn-laranja">Criar</button>
     </form>
     <p class="dica">Passe a senha inicial para o morador e peça para ele trocar em "Trocar senha".</p>
+    <p class="dica">⚖️ Peso = parte de cada um nas contas. 1 é a parte normal; quarto maior pode ser 1,5.</p>
 </div>
 <div class="card">
     <h3>🏠 Na casa</h3>
@@ -20,6 +21,10 @@
     {% for m in moradores %}
         <li class="item-row">
             <span><strong>{{ m.apelido }}</strong>{% if m.admin %} 👑{% endif %}{% if not m.ativo %} <em class="apagado">(saiu)</em>{% endif %}</span>
+            <form action="{{ url_for('moradores.mudar_peso', morador_id=m.id) }}" method="POST" class="peso-form" title="Peso na divisão das contas">
+                <input type="text" name="peso" inputmode="decimal" value="{{ ('%g'|format(m.peso)).replace('.', ',') }}" aria-label="Peso de {{ m.apelido }}">
+                <button type="submit" class="btn-laranja">OK</button>
+            </form>
             {% if m.id == g.morador.id %}
             <span class="apagado dica">você</span>
             {% else %}

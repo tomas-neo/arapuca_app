@@ -3,6 +3,7 @@
 <h1>🏠 ARAPUCA App</h1>
 <p>Fala, <strong>{{ g.morador.apelido }}</strong>! Central de Controle da República</p>
 <br>
+<a href="{{ url_for('contas.index') }}" class="botao-menu">💸 Contas e aluguel</a>
 <a href="{{ url_for('mercado.index') }}" class="botao-menu">🛒 Mercado (Dispensa)</a>
 <a href="{{ url_for('boiler.index') }}" class="botao-menu">🛁 Controle do Boiler</a>
 {% if g.morador.admin %}

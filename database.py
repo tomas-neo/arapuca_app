@@ -37,6 +37,35 @@ def inicializar_db():
         )
     ''')
 
+    # Peso de cada morador na divisão (1 = parte normal; quarto maior pode ser 1.5 etc.)
+    colunas = [c['name'] for c in conn.execute('PRAGMA table_info(moradores)')]
+    if 'peso' not in colunas:
+        conn.execute('ALTER TABLE moradores ADD COLUMN peso REAL NOT NULL DEFAULT 1')
+
+    # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS contas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mes TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0),
+            criado_por INTEGER REFERENCES moradores(id),
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # Divisão congelada quando o mês é fechado: quem estava na casa, com qual peso e quanto deve
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS rateio (
+            mes TEXT NOT NULL,
+            morador_id INTEGER NOT NULL REFERENCES moradores(id),
+            peso REAL NOT NULL,
+            valor_centavos INTEGER NOT NULL,
+            pago INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (mes, morador_id)
+        )
+    ''')
+
     cursor_mercado = conn.execute('SELECT COUNT(*) FROM mercado')
     if cursor_mercado.fetchone()[0] == 0:
         itens_iniciais = [("Papel Higiênico", 4), ("Café", 2), ("Leite", 6), ("Sabão em Pó", 1)]
