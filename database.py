@@ -174,6 +174,36 @@ def inicializar_db():
         )
     ''')
 
+    # Mercado: itens da planilha "Mercado anti reclamação" e tudo que entra e sai do estoque
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS mercado_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            local TEXT NOT NULL DEFAULT 'Mercado',
+            categoria TEXT NOT NULL DEFAULT 'essencial'
+                CHECK (categoria IN ('essencial', 'repor_sempre', 'ganha_brisa', 'quando_precisar')),
+            unidade TEXT NOT NULL DEFAULT 'un',
+            qtd_mensal REAL,
+            estoque REAL NOT NULL DEFAULT 0 CHECK (estoque >= 0),
+            ativo INTEGER NOT NULL DEFAULT 1
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS mercado_movimentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id INTEGER NOT NULL REFERENCES mercado_itens(id) ON DELETE CASCADE,
+            tipo TEXT NOT NULL CHECK (tipo IN ('compra', 'reposicao', 'uso')),
+            quantidade REAL NOT NULL CHECK (quantidade > 0),
+            morador_id INTEGER REFERENCES moradores(id),
+            criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+        )
+    ''')
+    if conn.execute('SELECT COUNT(*) FROM mercado_itens').fetchone()[0] == 0:
+        from modulos.mercado_itens import ITENS_PADRAO
+        conn.executemany(
+            'INSERT INTO mercado_itens (nome, local, categoria, unidade, qtd_mensal) VALUES (?, ?, ?, ?, ?)',
+            ITENS_PADRAO)
+
     cursor_mercado = conn.execute('SELECT COUNT(*) FROM mercado')
     if cursor_mercado.fetchone()[0] == 0:
         itens_iniciais = [("Papel Higiênico", 4), ("Café", 2), ("Leite", 6), ("Sabão em Pó", 1)]

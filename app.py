@@ -16,7 +16,7 @@ from modulos.boiler import boiler_bp
 from modulos.contas import contas_bp
 from modulos.icones import ICONE_MOTIVO, avatar, icone, icone_escala
 from modulos.escalas import escalas_bp, minhas_funcoes
-from modulos.mercado import mercado_bp
+from modulos.mercado import formatar_qtd, mercado_bp
 from modulos import planilha
 from modulos.moradores import moradores_bp
 
@@ -47,6 +47,7 @@ app.config.update(
 )
 
 inicializar_db()
+app.jinja_env.filters['qtd'] = formatar_qtd
 app.jinja_env.globals.update(avatar=avatar, icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
 
 app.register_blueprint(auth_bp)
