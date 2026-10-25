@@ -171,11 +171,11 @@ def test_ajuste_e_saldo(app):
     conn.close()
     admin.post(f"/contas/pagamento/{vaga}?mes=2026-10", data={"valor": "1.000,00"})
     pagina = mic.get("/contas/?mes=2026-10").text
-    assert "Pagou R$ 1.000,00" in pagina and "-R$ 275,00" in pagina   # saldo devendo
+    assert "Pagou R$ 1.000,00" in pagina and "Sua dívida com a rep" in pagina and "R$ 275,00" in pagina
 
     admin.post(f"/contas/pagamento/{vaga}?mes=2026-10", data={"valor": ""})  # vazio = pagou tudo
     pagina = mic.get("/contas/?mes=2026-10").text
-    assert pagina.count("Em aberto") == 2 and "Saldo" not in pagina   # só Oca e Xamã em aberto
+    assert pagina.count("Em aberto") == 2 and "Nada, tudo certo" in pagina   # só Oca e Xamã em aberto
 
 
 def test_vaga_livre_aparece(app):

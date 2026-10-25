@@ -9,18 +9,20 @@
     <form action="{{ url_for('moradores.novo') }}" method="POST">
         <input type="text" name="apelido" class="campo" placeholder="Apelido" required maxlength="40">
         <input type="text" name="senha" class="campo" placeholder="Senha inicial (mín. 6)" minlength="6" required>
+        <input type="text" name="ano" class="campo" placeholder="Ano que entrou (ex.: 2026 ou 026)" inputmode="numeric" maxlength="4">
         <label class="checkbox"><input type="checkbox" name="admin" value="1"> Admin</label>
         <button type="submit" class="btn-laranja">Criar</button>
     </form>
-    <p class="dica">Passe a senha inicial para o morador e peça para ele trocar em "Trocar senha".</p>
+    <p class="dica">Passe a senha inicial para o morador e peça para ele trocar no Perfil. Se a foto, o ano e o saldo dele estiverem em <code>dados_iniciais/</code>, entram sozinhos.</p>
 </div>
 <div class="card">
     <h3>{{ icone('pessoas') }} Na casa</h3>
+    <p class="dica">O saldo anterior é o que veio da aba Créditos da planilha Financeiro, antes do app. Os meses fechados no app somam em cima dele.</p>
     <ul class="lista">
     {% for m in moradores %}
-        <li class="item-row">
+        <li class="item-row quebra">
             {{ avatar(m.id, m.apelido, m.foto_versao, 'foto-mini') }}
-            <span class="item-texto"><span class="item-titulo">{{ m.apelido }}</span>{% if m.admin %}<span class="item-sub">Admin</span>{% endif %}{% if not m.ativo %}<span class="item-sub">Saiu da casa</span>{% endif %}</span>
+            <span class="item-texto"><span class="item-titulo">{{ m.apelido }}{% if m.ano %} <span class="apagado">{{ m.ano|ano }}</span>{% endif %}</span>{% if m.admin %}<span class="item-sub">Admin{% if m.id == g.morador.id %} · você{% endif %}</span>{% endif %}{% if not m.ativo %}<span class="item-sub">Saiu da casa</span>{% endif %}</span>
             {% if m.ativo %}
             <form action="{{ url_for('moradores.mudar_quarto', morador_id=m.id) }}" method="POST" class="peso-form">
                 <select name="quarto_id" aria-label="Quarto de {{ m.apelido }}" onchange="this.form.submit()">
@@ -32,17 +34,28 @@
                 <noscript><button type="submit" class="btn-claro btn-pequeno">OK</button></noscript>
             </form>
             {% endif %}
-            {% if m.id == g.morador.id %}
-            <span class="etiqueta">Você</span>
-            {% else %}
-            <form action="{{ url_for('moradores.alternar_ativo', morador_id=m.id) }}" method="POST">
-                {% if m.ativo %}
-                <button type="submit" class="btn-vermelho btn-pequeno">Desativar</button>
-                {% else %}
-                <button type="submit" class="btn-verde btn-pequeno">Reativar</button>
+
+            <details class="morador-dados">
+                <summary>Editar{% if m.saldo_anterior_centavos %} · <span class="{{ 'erro-texto' if m.saldo_anterior_centavos < 0 else 'saldo-positivo' }}">{{ 'deve ' if m.saldo_anterior_centavos < 0 else 'crédito ' }}{{ m.saldo_anterior_centavos|abs|reais }}</span>{% endif %}</summary>
+                <form action="{{ url_for('moradores.mudar_dados', morador_id=m.id) }}" method="POST" class="form-row">
+                    <input type="text" name="ano" value="{{ m.ano or '' }}" placeholder="Ano" inputmode="numeric" maxlength="4" aria-label="Ano que entrou" style="flex: 0 0 70px; text-align: center;">
+                    <select name="sentido" aria-label="Deve ou tem crédito" style="flex: 0 0 104px;">
+                        <option value="deve" {% if (m.saldo_anterior_centavos or 0) <= 0 %}selected{% endif %}>Deve</option>
+                        <option value="credito" {% if (m.saldo_anterior_centavos or 0) > 0 %}selected{% endif %}>Crédito</option>
+                    </select>
+                    <input type="text" name="saldo" value="{{ '%.2f'|format((m.saldo_anterior_centavos or 0)|abs / 100) if m.saldo_anterior_centavos else '' }}" placeholder="R$" inputmode="decimal" aria-label="Valor" style="flex: 1; min-width: 0;">
+                    <button type="submit" class="btn-laranja btn-pequeno">Salvar</button>
+                </form>
+                {% if m.id != g.morador.id %}
+                <form action="{{ url_for('moradores.alternar_ativo', morador_id=m.id) }}" method="POST">
+                    {% if m.ativo %}
+                    <button type="submit" class="btn-vermelho btn-pequeno">Desativar (saiu da casa)</button>
+                    {% else %}
+                    <button type="submit" class="btn-verde btn-pequeno">Reativar</button>
+                    {% endif %}
+                </form>
                 {% endif %}
-            </form>
-            {% endif %}
+            </details>
         </li>
     {% endfor %}
     </ul>

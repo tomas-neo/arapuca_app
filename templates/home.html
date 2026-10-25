@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 {% block titulo %}Arapuca{% endblock %}
-{% block subtitulo %}Olá, {{ g.morador.apelido }}{% endblock %}
-{% block titulo_topo %}Sua casa hoje{% endblock %}
+{% block topo_corpo %}
+<div class="saudacao">
+    <a href="{{ url_for('auth.trocar_senha') }}" class="saudacao-foto" aria-label="Seu perfil">{{ avatar(g.morador.id, g.morador.apelido, g.morador.foto_versao) }}</a>
+    <div>
+        <h1 class="topo-titulo">Olá, {{ g.morador.apelido }}{% if g.morador.ano %} <span class="turma">{{ g.morador.ano|ano }}</span>{% endif %}</h1>
+        <p class="saudacao-sub">{% if not tarefas %}Você não tem funções hoje{% elif tarefas|length == 1 %}Você tem 1 função hoje: {{ tarefas[0].linha }}{% else %}Você tem {{ tarefas|length }} funções hoje{% endif %}</p>
+    </div>
+</div>
+{% endblock %}
 {% block conteudo %}
 <div class="card">
     <h3>{{ icone('calendario') }} Suas funções hoje</h3>

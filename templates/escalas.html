@@ -44,7 +44,8 @@
             <div class="escala-linha">
                 <span class="escala-area">{{ linha }}</span>
                 <span class="escala-nomes">
-                    {% for t in turnos %}<span class="{{ 'eu' if t.morador_id == g.morador.id }}">{{ t.apelido }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+                    <span class="rostos">{% for t in turnos %}{{ avatar(t.morador_id, t.apelido, t.foto_versao, 'foto-mini') }}{% endfor %}</span>
+                    <span>{% for t in turnos %}<span class="{{ 'eu' if t.morador_id == g.morador.id }}">{{ t.apelido }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</span>
                 </span>
             </div>
             {% else %}

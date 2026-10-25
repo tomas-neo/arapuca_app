@@ -16,6 +16,22 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
 {% block conteudo %}
 {{ mostrar_erro(erro) }}
 
+{% set divida = saldo_anterior + meu_saldo %}
+<div class="card card-compacto">
+    <div class="divida {{ 'divida-deve' if divida < 0 else 'divida-ok' }}">
+        <span class="bolha {{ 'bolha-perigo' if divida < 0 else 'bolha-ok' }}">{{ icone('alerta' if divida < 0 else 'certo') }}</span>
+        <span class="item-texto">
+            <span class="item-sub">{% if divida < 0 %}Sua dívida com a rep{% elif divida > 0 %}A rep te deve{% else %}Sua dívida com a rep{% endif %}</span>
+            <strong>{{ divida|abs|reais if divida else 'Nada, tudo certo' }}</strong>
+        </span>
+    </div>
+    {% if saldo_anterior and meu_saldo %}
+    <p class="dica" style="margin: 10px 0 0;">Planilha antiga: {{ saldo_anterior|reais }} · Meses fechados no app: {{ meu_saldo|reais }}</p>
+    {% elif divida < 0 %}
+    <p class="dica" style="margin: 10px 0 0;">Fora o aluguel deste mês. Acertou? Fale com o financeiro para dar baixa.</p>
+    {% endif %}
+</div>
+
 {% if minha_parte %}
 <div class="card">
     <ul class="lista">
@@ -30,9 +46,6 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     <hr>
     <div class="form-row" style="justify-content: space-between; margin: 0;">
         {% if fechado %}{{ status_pago(minha_parte) }}{% else %}<span class="etiqueta">{{ icone('relogio') }} Prévia, pode mudar até fechar</span>{% endif %}
-        {% if meu_saldo %}
-        <span class="dica">Saldo: <strong class="{{ 'saldo-positivo' if meu_saldo > 0 else 'erro-texto' }}">{{ meu_saldo|reais }}</strong></span>
-        {% endif %}
     </div>
 </div>
 {% endif %}
@@ -142,7 +155,8 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     {% endif %}
     <ul class="lista">
     {% for l in linhas %}
-                <li class="item-row {% if l.morador_id == g.morador.id %}minha-linha{% endif %}">
+        <li class="item-row {% if l.morador_id == g.morador.id %}minha-linha{% endif %}">
+            {{ avatar(l.morador_id, l.apelido or '–', fotos.get(l.morador_id, 0), 'foto-mini') }}
             <span class="item-texto">
                 <span class="item-titulo">{{ l.apelido or 'Vaga livre' }}</span>
             </span>

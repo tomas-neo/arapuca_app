@@ -199,6 +199,9 @@ def index():
     lista_ajustes, _ = ajustes_do_mes(conn, mes)
     moradores = conn.execute('SELECT id, apelido FROM moradores WHERE ativo = 1 ORDER BY apelido').fetchall()
     meu_saldo = saldo_acumulado(conn, g.morador['id'])
+    fotos = {m['id']: m['foto_versao'] for m in conn.execute('SELECT id, foto_versao FROM moradores')}
+    saldo_anterior = conn.execute('SELECT COALESCE(saldo_anterior_centavos, 0) FROM moradores WHERE id = ?',
+                                  (g.morador['id'],)).fetchone()[0]
     conn.close()
 
     minha_parte = next((l for l in linhas if l['morador_id'] == g.morador['id']), None)
@@ -210,7 +213,7 @@ def index():
         total_aluguel=sum(c['valor_centavos'] for c in contas if c['tipo'] == 'aluguel'),
         total_despesas=sum(c['valor_centavos'] for c in contas if c['tipo'] != 'aluguel'),
         linhas=linhas, avisos=avisos, fechado=fechado,
-        minha_parte=minha_parte, meu_saldo=meu_saldo,
+        minha_parte=minha_parte, meu_saldo=meu_saldo, saldo_anterior=saldo_anterior, fotos=fotos,
         ajustes=lista_ajustes, tipos_ajuste=TIPOS_AJUSTE, moradores=moradores,
         erro=request.args.get("erro", ""),
     )

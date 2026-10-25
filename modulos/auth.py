@@ -16,7 +16,7 @@ ROTAS_PUBLICAS = {'auth.login', 'static', 'service_worker'}
 def buscar_morador(morador_id):
     conn = conectar_db()
     morador = conn.execute(
-        'SELECT id, apelido, admin, foto_versao FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
+        'SELECT id, apelido, admin, foto_versao, ano FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
     ).fetchone()
     conn.close()
     return morador

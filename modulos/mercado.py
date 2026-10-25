@@ -78,7 +78,9 @@ def index():
            ORDER BY mv.id DESC LIMIT 12''', (aba, aba)).fetchall()
     conn.close()
     faltando = [i for i in itens if i['situacao'] != "ok" and i['categoria'] != "quando_precisar"]
-    return render_template("mercado.html", aba=aba, abas=ABAS, itens=itens, grupos=por_local(itens),
+    busca = [{"id": i["id"], "nome": i["nome"], "unidade": i["unidade"], "local": i["local"],
+              "estoque": formatar_qtd(i["estoque"])} for i in itens]
+    return render_template("mercado.html", aba=aba, abas=ABAS, itens=itens, grupos=por_local(itens), busca=busca,
                            faltando=faltando, historico=historico, tipos=TIPOS, categorias=CATEGORIAS,
                            locais=LOCAIS, unidades=UNIDADES, erro=request.args.get("erro", ""),
                            ok=request.args.get("ok", ""))

@@ -407,3 +407,46 @@ a.chip { text-decoration: none; color: inherit; }
 .barra-fixa { position: sticky; bottom: 96px; z-index: 5; margin-bottom: 16px; }
 details.card > summary { list-style: none; cursor: pointer; }
 details.card > summary::-webkit-details-marker { display: none; }
+
+/* ---------- rodada 3: saudação, dívida, busca ---------- */
+.saudacao { display: flex; align-items: center; gap: 14px; margin-top: 22px; position: relative; z-index: 1; }
+.saudacao-foto { width: 64px; height: 64px; flex: 0 0 64px; border-radius: 50%; padding: 3px; background: rgba(255, 255, 255, 0.35); text-decoration: none; }
+.saudacao-foto .foto-inicial { font-size: 26px; }
+.saudacao .topo-titulo { margin: 0; font-size: 24px; line-height: 1.2; }
+.turma { display: inline-block; vertical-align: middle; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.25); color: #fff; }
+.saudacao-sub { margin: 4px 0 0; font-size: 13px; color: #fff; opacity: 0.9; }
+
+.card-compacto { padding: 14px 16px; }
+.divida { display: flex; align-items: center; gap: 12px; }
+.divida strong { display: block; font-size: 20px; font-weight: 700; }
+.divida-deve strong { color: var(--perigo); }
+.divida-ok strong { color: var(--ok); }
+
+.item-row.quebra { flex-wrap: wrap; }
+.morador-dados { flex: 0 0 calc(100% - 44px); margin: 2px 0 0 44px; min-width: 0; }
+.morador-dados summary { font-size: 12px; color: var(--texto-suave); cursor: pointer; }
+.morador-dados form { margin: 8px 0 0; }
+
+.busca { position: relative; margin-bottom: 8px; }
+.busca .ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--texto-suave); pointer-events: none; }
+.busca input { padding-left: 36px; width: 100%; }
+.resultados { list-style: none; margin: 0 0 8px; padding: 0; max-height: 220px; overflow-y: auto; border-radius: 14px; background: var(--campo); }
+.resultados li button { width: 100%; display: flex; justify-content: space-between; gap: 8px; padding: 10px 14px; background: none; color: var(--texto); box-shadow: none; border-radius: 0; font-weight: 400; text-align: left; }
+.resultados li button:hover, .resultados li button:focus { background: var(--laranja-suave); }
+.resultados li small { color: var(--texto-suave); }
+.escolhido { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--laranja-suave); color: var(--laranja-escuro); font-weight: 500; flex: 1; min-width: 0; }
+.escolhido span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rostos { display: inline-flex; align-items: center; vertical-align: middle; }
+.rostos .foto-mini { width: 22px; height: 22px; flex: 0 0 22px; font-size: 10px; border: 2px solid #fff; margin-left: -6px; }
+.rostos .foto-mini:first-child { margin-left: 0; }
+.escala-nomes { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.form-busca { align-items: flex-start; }
+.form-busca .busca { margin-bottom: 0; }
+.form-busca .resultados { margin: 6px 0 0; }
+.item-row > .foto-mini { flex: 0 0 32px; width: 32px; }
+.resultados li small { white-space: nowrap; }
+.item-row.quebra .item-texto { flex: 1 1 90px; min-width: 90px; }
+.item-row.quebra .item-titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-row.quebra .peso-form { flex: 0 1 128px; min-width: 0; }
+.item-row.quebra .peso-form select { width: 100%; }
