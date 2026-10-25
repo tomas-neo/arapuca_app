@@ -16,6 +16,7 @@ from modulos.boiler import boiler_bp
 from modulos.contas import contas_bp
 from modulos.icones import ICONE_MOTIVO, avatar, icone, icone_escala
 from modulos.escalas import escalas_bp, minhas_funcoes
+from modulos.funcas import funcas_bp, funcas_do_morador
 from modulos.mercado import formatar_qtd, mercado_bp
 from modulos import casa, planilha
 from modulos.moradores import moradores_bp
@@ -40,7 +41,8 @@ app.config.update(
     SECRET_KEY=carregar_chave_secreta(),
     PERMANENT_SESSION_LIFETIME=timedelta(days=365),  # celular fica logado; renova a cada acesso
     MAX_CONTENT_LENGTH=12 * 1024 * 1024,  # foto de perfil
-    SINCRONIZAR_PLANILHA=os.environ.get("ARAPUCA_SINCRONIZAR", "1") == "1",  # escalas da planilha do Drive
+    # escalas: quem manda é o app (o cargo de estrutura edita lá); a planilha só entra pelo botão
+    SINCRONIZAR_PLANILHA=os.environ.get("ARAPUCA_SINCRONIZAR", "0") == "1",
     AZARALHO_ATIVO=os.environ.get("ARAPUCA_AZARALHO", "0") == "1",  # em quarentena por enquanto
     BOILER_ATIVO=os.environ.get("ARAPUCA_BOILER", "0") == "1",  # em breve
     SESSION_COOKIE_SAMESITE="Lax",
@@ -58,6 +60,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(moradores_bp)
 app.register_blueprint(contas_bp)
 app.register_blueprint(escalas_bp)
+app.register_blueprint(funcas_bp)
 app.register_blueprint(mercado_bp)
 app.register_blueprint(boiler_bp)
 app.register_blueprint(azaralho_bp)
@@ -72,7 +75,10 @@ def service_worker():
 @app.route("/")
 def home():
     planilha.sincronizar_se_preciso(app.config["SINCRONIZAR_PLANILHA"])
-    return render_template("home.html", tarefas=minhas_funcoes(g.morador["id"]),
+    conn = conectar_db()
+    minhas_funcas = funcas_do_morador(conn, g.morador["id"])
+    conn.close()
+    return render_template("home.html", tarefas=minhas_funcoes(g.morador["id"]), minhas_funcas=minhas_funcas,
                            meus_pontos=meus_pontos_do_mes(g.morador["id"]) if app.config["AZARALHO_ATIVO"] else 0)
 
 

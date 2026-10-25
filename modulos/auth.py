@@ -28,7 +28,7 @@ def ler_cargos(texto):
 def buscar_morador(morador_id):
     conn = conectar_db()
     linha = conn.execute(
-        'SELECT id, apelido, admin, foto_versao, ano, cargos FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
+        'SELECT id, apelido, admin, foto_versao, ano, cargos, senha_padrao FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
     ).fetchone()
     conn.close()
     if linha is None:
@@ -137,9 +137,10 @@ def trocar_senha():
         elif len(nova) < 6:
             erro = "A nova senha precisa de 6 caracteres ou mais"
         else:
-            conn.execute('UPDATE moradores SET senha_hash = ? WHERE id = ?',
+            conn.execute('UPDATE moradores SET senha_hash = ?, senha_padrao = 0 WHERE id = ?',
                          (generate_password_hash(nova), g.morador['id']))
             conn.commit()
+            g.morador['senha_padrao'] = 0
             sucesso = True
         conn.close()
 
