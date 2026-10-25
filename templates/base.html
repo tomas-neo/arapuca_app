@@ -2,35 +2,66 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <!-- PWA: Configurações do App -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}?v=3">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <meta name="theme-color" content="#FF6600">
+    <meta name="theme-color" content="#ff8a2b">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=10">
 
-    <title>{% block titulo %}Arapuca App{% endblock %}</title>
+    <title>{% block titulo %}Arapuca{% endblock %}</title>
     {% block head %}{% endblock %}
 </head>
-<body>
-    <div class="container">
-        <div class="app-bar">
-            <img src="{{ url_for('static', filename='icone.png') }}" alt="Arapuca">
-            <span>{{ self.titulo() }}</span>
+<body class="{% block corpo_classe %}{% endblock %}">
+<div class="app">
+    {% block topo %}
+    <header class="topo">
+        <div class="topo-barra">
+            {% if request.endpoint == 'home' %}
+            <img src="{{ url_for('static', filename='icone.png') }}" alt="" class="topo-logo">
+            {% else %}
+            <a href="{{ url_for('home') }}" class="topo-botao" aria-label="Voltar ao início">{{ icone('voltar') }}</a>
+            {% endif %}
+            <span class="topo-marca">Arapuca</span>
+            {% if g.morador %}
+            <a href="{{ url_for('auth.trocar_senha') }}" class="avatar" aria-label="Seu perfil">{{ g.morador.apelido[:1]|upper }}</a>
+            {% endif %}
         </div>
-        {% block conteudo %}{% endblock %}
-    </div>
+        <p class="topo-sub">{% block subtitulo %}{% endblock %}</p>
+        <h1 class="topo-titulo">{% block titulo_topo %}{{ self.titulo() }}{% endblock %}</h1>
+        {% block topo_extra %}{% endblock %}
+    </header>
+    {% endblock %}
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                .catch(function (err) { console.log('Falha ao registrar o Service Worker:', err); });
-        }
-    </script>
+    <main class="conteudo">
+        {% block conteudo %}{% endblock %}
+    </main>
+</div>
+
+{% if g.morador %}
+{% set aba = request.blueprint or request.endpoint %}
+<nav class="abas" aria-label="Navegação">
+    {% for alvo, rotulo, nome_icone, chave in [
+        ('home', 'Início', 'casa', 'home'),
+        ('escalas.index', 'Escalas', 'calendario', 'escalas'),
+        ('contas.index', 'Contas', 'carteira', 'contas'),
+        ('azaralho.index', 'Azaralho', 'bandeira', 'azaralho'),
+        ('auth.trocar_senha', 'Perfil', 'pessoa', 'auth')] %}
+    <a href="{{ url_for(alvo) }}" class="{{ 'ativa' if aba == chave }}">{{ icone(nome_icone) }}<span>{{ rotulo }}</span></a>
+    {% endfor %}
+</nav>
+{% endif %}
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .catch(function (err) { console.log('Falha ao registrar o Service Worker:', err); });
+    }
+</script>
 </body>
 </html>

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "_macros.html" import erro as mostrar_erro, voltar %}
+{% from "_macros.html" import erro as mostrar_erro %}
 {% block titulo %}Moradores{% endblock %}
+{% block subtitulo %}Admin{% endblock %}
 {% block conteudo %}
-<h2>👥 Moradores</h2>
 <div class="card">
-    <h3>➕ Novo morador</h3>
+    <h3>{{ icone('mais') }} Novo morador</h3>
     {{ mostrar_erro(erro) }}
     <form action="{{ url_for('moradores.novo') }}" method="POST">
         <input type="text" name="apelido" class="campo" placeholder="Apelido" required maxlength="40">
@@ -15,11 +15,11 @@
     <p class="dica">Passe a senha inicial para o morador e peça para ele trocar em "Trocar senha".</p>
 </div>
 <div class="card">
-    <h3>🏠 Na casa</h3>
+    <h3>{{ icone('pessoas') }} Na casa</h3>
     <ul class="lista">
     {% for m in moradores %}
         <li class="item-row">
-            <span><strong>{{ m.apelido }}</strong>{% if m.admin %} 👑{% endif %}{% if not m.ativo %} <em class="apagado">(saiu)</em>{% endif %}</span>
+            <span class="item-texto"><span class="item-titulo">{{ m.apelido }}</span>{% if m.admin %}<span class="item-sub">Admin</span>{% endif %}{% if not m.ativo %}<span class="item-sub">Saiu da casa</span>{% endif %}</span>
             {% if m.ativo %}
             <form action="{{ url_for('moradores.mudar_quarto', morador_id=m.id) }}" method="POST" class="peso-form">
                 <select name="quarto_id" aria-label="Quarto de {{ m.apelido }}" onchange="this.form.submit()">
@@ -28,17 +28,17 @@
                     <option value="{{ q.id }}" {% if q.id == m.quarto_id %}selected{% endif %}>{{ q.nome }}</option>
                     {% endfor %}
                 </select>
-                <noscript><button type="submit" class="btn-laranja">OK</button></noscript>
+                <noscript><button type="submit" class="btn-claro btn-pequeno">OK</button></noscript>
             </form>
             {% endif %}
             {% if m.id == g.morador.id %}
-            <span class="apagado dica">você</span>
+            <span class="etiqueta">Você</span>
             {% else %}
             <form action="{{ url_for('moradores.alternar_ativo', morador_id=m.id) }}" method="POST">
                 {% if m.ativo %}
-                <button type="submit" class="btn-vermelho">Desativar</button>
+                <button type="submit" class="btn-vermelho btn-pequeno">Desativar</button>
                 {% else %}
-                <button type="submit" class="btn-verde">Reativar</button>
+                <button type="submit" class="btn-verde btn-pequeno">Reativar</button>
                 {% endif %}
             </form>
             {% endif %}
@@ -48,7 +48,7 @@
 </div>
 
 <div class="card" id="quartos">
-    <h3>🛏️ Quartos</h3>
+    <h3>{{ icone('cama') }} Quartos</h3>
     <p class="dica">Ponderação = fatia do aluguel dos quartos (somando todas dá 1). Vagas = quantas pessoas cabem; vaga vazia também entra na divisão, igual na planilha.</p>
     {% for q in quartos %}
     <form action="{{ url_for('moradores.editar_quarto', quarto_id=q.id) }}" method="POST" class="form-row quarto-form">
@@ -56,9 +56,9 @@
         <input type="text" name="ponderacao" inputmode="decimal" value="{{ ('%g'|format(q.ponderacao)).replace('.', ',') }}" aria-label="Ponderação de {{ q.nome }}" class="num-curto">
         <input type="number" name="vagas" value="{{ q.vagas }}" min="1" max="10" aria-label="Vagas de {{ q.nome }}" class="num-mini">
         <span class="dica {% if q.ocupantes > q.vagas %}erro-texto{% endif %}">{{ q.ocupantes }}/{{ q.vagas }}</span>
-        <button type="submit" class="btn-laranja">OK</button>
-        <button type="submit" class="btn-vermelho" title="Apagar" formaction="{{ url_for('moradores.apagar_quarto', quarto_id=q.id) }}"
-                onclick="return confirm({{ ('Apagar o quarto ' ~ q.nome ~ '? Quem mora nele fica sem quarto.')|tojson }});">🗑️</button>
+        <button type="submit" class="btn-claro btn-icone" title="Salvar" aria-label="Salvar {{ q.nome }}">{{ icone('certo') }}</button>
+        <button type="submit" class="btn-vermelho btn-icone" title="Apagar" aria-label="Apagar {{ q.nome }}" formaction="{{ url_for('moradores.apagar_quarto', quarto_id=q.id) }}"
+                onclick="return confirm({{ ('Apagar o quarto ' ~ q.nome ~ '? Quem mora nele fica sem quarto.')|tojson }});">{{ icone('lixo') }}</button>
     </form>
     {% endfor %}
     <p class="total">Ponderação somada: <strong {% if (soma_ponderacao - 1)|abs > 0.0005 %}class="erro-texto"{% endif %}>{{ ('%.3f'|format(soma_ponderacao)).replace('.', ',') }}</strong> · {{ total_vagas }} vagas</p>
@@ -72,7 +72,7 @@
 </div>
 
 <div class="card">
-    <h3>⚙️ Regra da divisão</h3>
+    <h3>{{ icone('ajustes') }} Regra da divisão</h3>
     <form action="{{ url_for('moradores.salvar_config') }}" method="POST">
         <label>Caixinha por pessoa
             <input type="text" name="caixinha" class="campo" inputmode="decimal" value="{{ caixinha }}">
@@ -84,5 +84,4 @@
     </form>
     <p class="dica">O resto do aluguel vai pelos quartos. Água, luz, internet etc. são divididas igual entre todas as vagas.</p>
 </div>
-{{ voltar() }}
 {% endblock %}

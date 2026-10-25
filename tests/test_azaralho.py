@@ -100,11 +100,11 @@ def test_nao_fez_pelas_escalas(app):
     oca.post("/azaralho/novo", data=dados)
     oca.post("/azaralho/novo", data=dados)      # segundo toque não duplica
     assert pontos(oca, "Mic") == 1
-    assert "❌ marcado" in oca.get("/azaralho/").text
+    assert "Marcado" in oca.get("/azaralho/").text
 
 
 def test_ranking_por_mes(app):
     oca = logar(app, "Oca")
     oca.post("/azaralho/novo", data={"morador_id": "2", "motivo": "outro", "data": "2026-01-10"})
     assert "+1" in oca.get("/azaralho/?mes=2026-01").text
-    assert "Milagre" in oca.get("/azaralho/?mes=2026-02").text
+    assert "Ninguém tomou ponto" in oca.get("/azaralho/?mes=2026-02").text

@@ -1,16 +1,19 @@
 {% extends "base.html" %}
 {% from "_macros.html" import erro as mostrar_erro %}
+{% block titulo %}Entrar · Arapuca{% endblock %}
+{% block corpo_classe %}pagina-entrada{% endblock %}
+{% block topo %}{% endblock %}
 {% block conteudo %}
-<h2>🔐 Entrar</h2>
-<div class="card">
-    {{ mostrar_erro(erro) }}
-    <form action="{{ url_for('auth.login') }}" method="POST">
-        <input type="hidden" name="proximo" value="{{ proximo }}">
-        <input type="text" name="apelido" class="campo" placeholder="Apelido (ex: Oca)" value="{{ apelido }}"
-               autocomplete="username" autocapitalize="words" required>
-        <input type="password" name="senha" class="campo" placeholder="Senha" autocomplete="current-password" required>
-        <button type="submit" class="btn-laranja">Entrar</button>
-    </form>
-</div>
-<p>Não tem conta? Peça para o admin da casa criar a sua.</p>
+<img src="{{ url_for('static', filename='icone.png') }}" alt="" class="entrada-logo">
+<p class="entrada-marca">Arapuca</p>
+<h1 class="entrada-titulo">Bem-vindo!</h1>
+{{ mostrar_erro(erro) }}
+<form action="{{ url_for('auth.login') }}" method="POST">
+    <input type="hidden" name="proximo" value="{{ proximo }}">
+    <input type="text" name="apelido" placeholder="Apelido" value="{{ apelido }}"
+           autocomplete="username" autocapitalize="words" required>
+    <input type="password" name="senha" placeholder="Senha" autocomplete="current-password" required>
+    <button type="submit" class="btn-branco" style="margin-top: 10px;">Entrar</button>
+</form>
+<p class="entrada-rodape">Não tem conta? Peça para o admin da casa criar a sua.</p>
 {% endblock %}

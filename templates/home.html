@@ -1,28 +1,36 @@
 {% extends "base.html" %}
+{% block titulo %}Arapuca{% endblock %}
+{% block subtitulo %}Olá, {{ g.morador.apelido }}{% endblock %}
+{% block titulo_topo %}Sua casa hoje{% endblock %}
 {% block conteudo %}
-<h1>🏠 ARAPUCA App</h1>
-<p>Fala, <strong>{{ g.morador.apelido }}</strong>! Central de Controle da República</p>
-<div class="card destaque">
-    <h3>📌 Suas funções hoje</h3>
-    {% if tarefas %}
-    <ul class="lista hoje-lista">
-        {% for t in tarefas %}<li class="item-row"><span>{{ t.icone }} {{ t.escala }} · {{ t.linha }}</span></li>{% endfor %}
-    </ul>
+<div class="card">
+    <h3>{{ icone('calendario') }} Suas funções hoje</h3>
+    <ul class="lista">
+    {% for t in tarefas %}
+        <li class="item-row">
+            <span class="bolha">{{ icone(icone_escala(t.escala)) }}</span>
+            <span class="item-texto"><span class="item-titulo">{{ t.linha }}</span><span class="item-sub">{{ t.escala }}</span></span>
+        </li>
     {% else %}
-    <p class="centro">Nada pra hoje. Folga! 🎉</p>
+        <p class="vazio">Nada pra hoje. Folga.</p>
+    {% endfor %}
+    </ul>
+    {% if meus_pontos %}
+    <hr>
+    <a href="{{ url_for('azaralho.index') }}" class="alerta alerta-critico" style="margin: 0; text-decoration: none;">
+        {{ icone('bandeira') }}<p>Você tem {{ meus_pontos }} {{ 'ponto' if meus_pontos == 1 else 'pontos' }} de azaralho este mês</p>
+    </a>
     {% endif %}
-    {% if meus_pontos %}<p class="centro erro-texto">💀 Você tem {{ meus_pontos }} {{ 'ponto' if meus_pontos == 1 else 'pontos' }} de azaralho este mês</p>{% endif %}
 </div>
-<a href="{{ url_for('escalas.index') }}" class="botao-menu">📅 Escalas</a>
-<a href="{{ url_for('azaralho.index') }}" class="botao-menu">💀 Pontos de azaralho</a>
-<a href="{{ url_for('contas.index') }}" class="botao-menu">💸 Contas e aluguel</a>
-<a href="{{ url_for('mercado.index') }}" class="botao-menu">🛒 Mercado (Dispensa)</a>
-<a href="{{ url_for('boiler.index') }}" class="botao-menu">🛁 Controle do Boiler</a>
-{% if g.morador.admin %}
-<a href="{{ url_for('moradores.index') }}" class="botao-menu">👥 Moradores</a>
-{% endif %}
-<a href="{{ url_for('auth.trocar_senha') }}" class="botao-menu">🔑 Trocar senha</a>
-<form action="{{ url_for('auth.logout') }}" method="POST">
-    <button type="submit" class="btn-vermelho">Sair</button>
-</form>
+
+<div class="atalhos">
+    <a href="{{ url_for('escalas.index') }}" class="atalho"><span class="bolha">{{ icone('calendario') }}</span>Escalas<small>Limpeza, Buddha, roupa</small></a>
+    <a href="{{ url_for('contas.index') }}" class="atalho"><span class="bolha">{{ icone('carteira') }}</span>Contas<small>Aluguel do mês</small></a>
+    <a href="{{ url_for('azaralho.index') }}" class="atalho"><span class="bolha">{{ icone('bandeira') }}</span>Azaralho<small>Ranking do mês</small></a>
+    <a href="{{ url_for('mercado.index') }}" class="atalho"><span class="bolha">{{ icone('carrinho') }}</span>Mercado<small>Dispensa da casa</small></a>
+    <a href="{{ url_for('boiler.index') }}" class="atalho"><span class="bolha">{{ icone('chama') }}</span>Boiler<small>Quem ligou</small></a>
+    {% if g.morador.admin %}
+    <a href="{{ url_for('moradores.index') }}" class="atalho"><span class="bolha">{{ icone('pessoas') }}</span>Moradores<small>Quartos e regras</small></a>
+    {% endif %}
+</div>
 {% endblock %}

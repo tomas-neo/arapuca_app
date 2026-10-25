@@ -1,46 +1,47 @@
 {% extends "base.html" %}
-{% from "_macros.html" import erro as mostrar_erro, voltar %}
+{% from "_macros.html" import erro as mostrar_erro %}
 {% block titulo %}Escalas{% endblock %}
+{% block subtitulo %}Hoje é {{ dias[hoje]|lower }}{% endblock %}
 {% block conteudo %}
-<h2>📅 Escalas da casa</h2>
 {{ mostrar_erro(erro) }}
 
-<div class="card destaque">
-    <h3>Hoje ({{ dias[hoje] }})</h3>
+<div class="card">
+    <h3>{{ icone('relogio') }} Hoje na casa</h3>
     <ul class="lista">
     {% for t in hoje_na_casa %}
-        <li class="item-row{% if t.morador_id == g.morador.id %} minha{% endif %}">
-            <span>{{ t.icone }} {{ t.escala }} · {{ t.linha }}</span>
-            <strong>{{ t.apelido }}</strong>
+        <li class="item-row{% if t.morador_id == g.morador.id %} minha-linha{% endif %}">
+            <span class="bolha">{{ icone(icone_escala(t.escala)) }}</span>
+            <span class="item-texto"><span class="item-titulo">{{ t.apelido }}</span><span class="item-sub">{{ t.escala }} · {{ t.linha }}</span></span>
+            {% if t.morador_id == g.morador.id %}<span class="etiqueta">Você</span>{% endif %}
         </li>
     {% else %}
-        <p class="estoque-vazio">Ninguém escalado pra hoje.</p>
+        <p class="vazio">Ninguém escalado pra hoje.</p>
     {% endfor %}
     </ul>
 </div>
 
 {% for e in escalas %}
 <div class="card" id="escala-{{ e.id }}">
-    <h3>{{ e.icone }} {{ e.nome }}</h3>
+    <h3>{{ icone(icone_escala(e.nome)) }} {{ e.nome }}</h3>
     {% for dia in range(7) %}
     <div class="dia{% if dia == hoje %} dia-hoje{% endif %}">
         <div class="dia-nome">{{ dias[dia] }}</div>
         <div class="chips">
         {% for t in e.por_dia[dia] %}
             <span class="chip{% if t.morador_id == g.morador.id %} chip-meu{% endif %}">
-                {% if e.linhas|length > 1 %}<em>{{ t.linha }}:</em> {% endif %}{{ t.apelido }}
+                {% if e.linhas|length > 1 %}<em>{{ t.linha }}</em> {% endif %}{{ t.apelido }}
                 {% if g.morador.admin %}
                 <form action="{{ url_for('escalas.remover_turno') }}" method="POST">
                     <input type="hidden" name="escala_id" value="{{ e.id }}">
                     <input type="hidden" name="linha_id" value="{{ t.linha_id }}">
                     <input type="hidden" name="dia" value="{{ dia }}">
                     <input type="hidden" name="morador_id" value="{{ t.morador_id }}">
-                    <button type="submit" class="chip-x" title="Tirar">×</button>
+                    <button type="submit" class="chip-x" title="Tirar" aria-label="Tirar {{ t.apelido }}">{{ icone('fechar') }}</button>
                 </form>
                 {% endif %}
             </span>
         {% else %}
-            <span class="apagado dica">ninguém</span>
+            <span class="apagado dica" style="padding-top: 4px;">ninguém</span>
         {% endfor %}
         </div>
     </div>
@@ -74,14 +75,14 @@
                 <span>{{ l.nome }}</span>
                 <form action="{{ url_for('escalas.apagar_linha', linha_id=l.id) }}" method="POST"
                       onsubmit='return confirm({{ ("Apagar " ~ l.nome ~ " e quem está escalado nela?")|tojson }});'>
-                    <button type="submit" class="btn-vermelho">Apagar</button>
+                    <button type="submit" class="btn-vermelho btn-icone" title="Apagar" aria-label="Apagar {{ l.nome }}">{{ icone('lixo') }}</button>
                 </form>
             </li>
         {% endfor %}
         </ul>
-        <form action="{{ url_for('escalas.adicionar_linha', escala_id=e.id) }}" method="POST" class="form-row" style="margin-top: 10px;">
-            <input type="text" name="nome" placeholder="Nova linha (ex: Banheiro)" maxlength="30" required style="flex: 2; min-width: 160px;">
-            <button type="submit" class="btn-laranja" style="flex: 1;">Adicionar</button>
+        <form action="{{ url_for('escalas.adicionar_linha', escala_id=e.id) }}" method="POST" class="form-row" style="margin-top: 12px;">
+            <input type="text" name="nome" placeholder="Nova linha (ex: Banheiro)" maxlength="30" required style="flex: 1; min-width: 0;">
+            <button type="submit" class="btn-claro btn-icone" aria-label="Adicionar linha">{{ icone('mais') }}</button>
         </form>
     </details>
     {% endif %}
@@ -90,14 +91,11 @@
 
 {% if g.morador.admin %}
 <div class="card">
-    <h3>➕ Nova escala</h3>
+    <h3>{{ icone('mais') }} Nova escala</h3>
     <form action="{{ url_for('escalas.nova_escala') }}" method="POST" class="form-row">
-        <input type="text" name="icone" placeholder="🗑️" maxlength="2" style="flex: 0.4; min-width: 60px; text-align: center;">
-        <input type="text" name="nome" placeholder="Ex: Tirar o lixo" maxlength="40" required style="flex: 2; min-width: 160px;">
-        <button type="submit" class="btn-laranja">Criar</button>
+        <input type="text" name="nome" placeholder="Ex: Tirar o lixo" maxlength="40" required style="flex: 1; min-width: 0;">
+        <button type="submit" class="btn-laranja btn-pequeno">Criar</button>
     </form>
 </div>
 {% endif %}
-
-{{ voltar() }}
 {% endblock %}

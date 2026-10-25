@@ -163,7 +163,7 @@ def test_ajuste_e_saldo(app):
     mic = logar(app, "Mic")
     pagina = mic.get("/contas/?mes=2026-10").text
     assert "R$ 1.275,00" in pagina          # 1.250 + 40 − 15
-    assert "Ainda não pago" in pagina
+    assert "Em aberto" in pagina
 
     from database import conectar_db
     conn = conectar_db()
@@ -175,7 +175,7 @@ def test_ajuste_e_saldo(app):
 
     admin.post(f"/contas/pagamento/{vaga}?mes=2026-10", data={"valor": ""})  # vazio = pagou tudo
     pagina = mic.get("/contas/?mes=2026-10").text
-    assert "✅ Pago" in pagina and "Saldo" not in pagina
+    assert pagina.count("Em aberto") == 2 and "Saldo" not in pagina   # só Oca e Xamã em aberto
 
 
 def test_vaga_livre_aparece(app):

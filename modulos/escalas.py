@@ -144,7 +144,7 @@ def apagar_linha(linha_id):
 @somente_admin
 def nova_escala():
     nome = request.form.get('nome', '').strip()
-    icone = request.form.get('icone', '').strip()[:2] or '📋'
+    icone = ''  # o ícone sai do nome da escala (modulos/icones.py)
     if not nome or len(nome) > 40:
         return redirect(url_for('escalas.index', erro="Nome da escala inválido (até 40 letras)"))
     conn = conectar_db()

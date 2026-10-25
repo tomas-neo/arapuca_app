@@ -122,7 +122,7 @@ def inicializar_db():
         CREATE TABLE IF NOT EXISTS escalas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL UNIQUE,
-            icone TEXT NOT NULL DEFAULT '📋'
+            icone TEXT NOT NULL DEFAULT ''
         )
     ''')
     conn.execute('''
@@ -143,9 +143,9 @@ def inicializar_db():
     ''')
     if conn.execute('SELECT COUNT(*) FROM escalas').fetchone()[0] == 0:
         # Mesmas escalas da planilha "Funções - Arapuca"
-        padrao = [("Limpeza", "🧹", ["Cozinha", "Garagem"]),
-                  ("Passeio do Buddha", "🐕", ["Passeio"]),
-                  ("Lavar roupa", "🧺", ["1ª máquina", "2ª máquina"])]
+        padrao = [("Limpeza", "", ["Cozinha", "Garagem"]),
+                  ("Passeio do Buddha", "", ["Passeio"]),
+                  ("Lavar roupa", "", ["1ª máquina", "2ª máquina"])]
         for nome, icone, linhas in padrao:
             escala_id = conn.execute('INSERT INTO escalas (nome, icone) VALUES (?, ?)', (nome, icone)).lastrowid
             conn.executemany('INSERT INTO escala_linhas (escala_id, nome) VALUES (?, ?)',

@@ -14,6 +14,7 @@ from modulos.auth import auth_bp
 from modulos.azaralho import azaralho_bp, meus_pontos_do_mes
 from modulos.boiler import boiler_bp
 from modulos.contas import contas_bp
+from modulos.icones import ICONE_MOTIVO, icone, icone_escala
 from modulos.escalas import escalas_bp, minhas_tarefas_hoje
 from modulos.mercado import mercado_bp
 from modulos.moradores import moradores_bp
@@ -41,6 +42,7 @@ app.config.update(
 )
 
 inicializar_db()
+app.jinja_env.globals.update(icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(moradores_bp)
