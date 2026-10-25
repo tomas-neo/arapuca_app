@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "_macros.html" import voltar %}
+{% block titulo %}Sem permissão{% endblock %}
+{% block conteudo %}
+<div class="card">
+    <div class="alerta alerta-critico"><h2>🚫 Só admin</h2></div>
+    <p class="centro">Essa página é só para quem administra o app.</p>
+</div>
+{{ voltar() }}
+{% endblock %}

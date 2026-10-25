@@ -6,12 +6,10 @@ from datetime import timedelta
 from pathlib import Path
 
 import click
-from flask import Flask, g, send_from_directory
-from markupsafe import escape
+from flask import Flask, render_template, send_from_directory
 from werkzeug.security import generate_password_hash
 
 from database import conectar_db, inicializar_db
-from estilo import renderizar_pagina
 from modulos.auth import auth_bp
 from modulos.boiler import boiler_bp
 from modulos.mercado import mercado_bp
@@ -55,23 +53,7 @@ def service_worker():
 
 @app.route("/")
 def home():
-    admin = ""
-    if g.morador["admin"]:
-        admin = '<a href="/moradores" class="botao-menu">👥 Moradores</a>'
-
-    conteudo = f"""
-    <h1>🏠 ARAPUCA App</h1>
-    <p>Fala, <strong>{escape(g.morador['apelido'])}</strong>! Central de Controle da República</p>
-    <br>
-    <a href="/mercado" class="botao-menu">🛒 Mercado (Dispensa)</a>
-    <a href="/boiler" class="botao-menu">🛁 Controle do Boiler</a>
-    {admin}
-    <a href="/senha" class="botao-menu">🔑 Trocar senha</a>
-    <form action="/logout" method="POST">
-        <button type="submit" class="btn-vermelho">Sair</button>
-    </form>
-    """
-    return renderizar_pagina("Arapuca App", conteudo)
+    return render_template("home.html")
 
 
 @app.cli.command("criar-admin")

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import erro as mostrar_erro %}
+{% block conteudo %}
+<h2>🔐 Entrar</h2>
+<div class="card">
+    {{ mostrar_erro(erro) }}
+    <form action="{{ url_for('auth.login') }}" method="POST">
+        <input type="hidden" name="proximo" value="{{ proximo }}">
+        <input type="text" name="apelido" class="campo" placeholder="Apelido (ex: Oca)" value="{{ apelido }}"
+               autocomplete="username" autocapitalize="words" required>
+        <input type="password" name="senha" class="campo" placeholder="Senha" autocomplete="current-password" required>
+        <button type="submit" class="btn-laranja">Entrar</button>
+    </form>
+</div>
+<p>Não tem conta? Peça para o admin da casa criar a sua.</p>
+{% endblock %}

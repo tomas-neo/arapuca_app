@@ -1,11 +1,9 @@
 from functools import wraps
 
-from flask import Blueprint, g, redirect, request, session, url_for
-from markupsafe import escape
+from flask import Blueprint, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import conectar_db
-from estilo import renderizar_pagina
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -40,11 +38,7 @@ def somente_admin(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not g.morador or not g.morador['admin']:
-            return renderizar_pagina("Sem permissão", """
-            <div class="card"><div class="alerta alerta-critico"><h2>🚫 Só admin</h2></div>
-            <p style="text-align:center;">Essa página é só para quem administra o app.</p></div>
-            <a href="/" class="botao-menu">🏠 Voltar para o início</a>
-            """), 403
+            return render_template("sem_permissao.html"), 403
         return view(*args, **kwargs)
     return wrapper
 
@@ -57,23 +51,7 @@ def destino_seguro(proximo):
 
 
 def pagina_login(erro="", apelido="", proximo=""):
-    aviso = f"<div class='alerta alerta-critico'><h3 style='color:#fff;margin:0;'>{escape(erro)}</h3></div>" if erro else ""
-    conteudo = f"""
-    <h2>🔐 Entrar</h2>
-    <div class="card">
-        {aviso}
-        <form action="/login" method="POST">
-            <input type="hidden" name="proximo" value="{escape(proximo)}">
-            <input type="text" name="apelido" placeholder="Apelido (ex: Oca)" value="{escape(apelido)}"
-                   autocomplete="username" autocapitalize="words" required style="margin-bottom: 10px;">
-            <input type="password" name="senha" placeholder="Senha" autocomplete="current-password"
-                   required style="margin-bottom: 10px;">
-            <button type="submit" class="btn-laranja">Entrar</button>
-        </form>
-    </div>
-    <p>Não tem conta? Peça para o admin da casa criar a sua.</p>
-    """
-    return renderizar_pagina("Arapuca App", conteudo)
+    return render_template("login.html", erro=erro, apelido=apelido, proximo=proximo)
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -110,33 +88,22 @@ def logout():
 
 @auth_bp.route("/senha", methods=["GET", "POST"])
 def trocar_senha():
-    mensagem = ""
+    erro = ""
+    sucesso = False
     if request.method == "POST":
         atual = request.form.get('atual', '')
         nova = request.form.get('nova', '')
         conn = conectar_db()
         row = conn.execute('SELECT senha_hash FROM moradores WHERE id = ?', (g.morador['id'],)).fetchone()
         if not check_password_hash(row['senha_hash'], atual):
-            mensagem = "<div class='alerta alerta-critico'><h3 style='color:#fff;margin:0;'>Senha atual errada</h3></div>"
+            erro = "Senha atual errada"
         elif len(nova) < 6:
-            mensagem = "<div class='alerta alerta-critico'><h3 style='color:#fff;margin:0;'>A nova senha precisa de 6 caracteres ou mais</h3></div>"
+            erro = "A nova senha precisa de 6 caracteres ou mais"
         else:
             conn.execute('UPDATE moradores SET senha_hash = ? WHERE id = ?',
                          (generate_password_hash(nova), g.morador['id']))
             conn.commit()
-            mensagem = "<div class='alerta alerta-ok'><h3>✅ Senha trocada</h3></div>"
+            sucesso = True
         conn.close()
 
-    conteudo = f"""
-    <h2>🔑 Trocar senha</h2>
-    <div class="card">
-        {mensagem}
-        <form action="/senha" method="POST">
-            <input type="password" name="atual" placeholder="Senha atual" autocomplete="current-password" required style="margin-bottom: 10px;">
-            <input type="password" name="nova" placeholder="Nova senha (mín. 6)" autocomplete="new-password" minlength="6" required style="margin-bottom: 10px;">
-            <button type="submit" class="btn-laranja">Salvar</button>
-        </form>
-    </div>
-    <a href='/' class="botao-menu">🏠 Voltar para o início</a>
-    """
-    return renderizar_pagina("Trocar senha", conteudo)
+    return render_template("senha.html", erro=erro, sucesso=sucesso)
