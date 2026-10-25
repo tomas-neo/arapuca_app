@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% from "_macros.html" import erro as mostrar_erro, voltar %}
+{% macro detalhe(l) -%}
+casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + caixinha {{ l.caixinha_centavos|reais }}
+{%- if l.ajustes_centavos > 0 %} + ajustes {{ l.ajustes_centavos|reais }}{% elif l.ajustes_centavos < 0 %} − desconto {{ (-l.ajustes_centavos)|reais }}{% endif %}
+{%- endmacro %}
 {% block titulo %}Contas da casa{% endblock %}
 {% block conteudo %}
 <h2>💸 Contas e aluguel</h2>
@@ -10,25 +14,41 @@
     <a href="{{ url_for('contas.index', mes=proximo) }}" class="botao-mes">▶</a>
 </div>
 
+{{ mostrar_erro(erro) }}
+
 {% if minha_parte %}
 <div class="card destaque">
-    <p class="centro">Sua parte em {{ nome_mes|lower }}</p>
-    <h1 class="centro valor-grande">{{ minha_parte.valor_centavos|reais }}</h1>
+    <p class="centro">Sua parte em {{ nome_mes|lower }} · {{ minha_parte.quarto }}</p>
+    <h1 class="centro valor-grande">{{ minha_parte.total_centavos|reais }}</h1>
+    <p class="centro dica">{{ detalhe(minha_parte) }}</p>
     {% if fechado %}
-    <p class="centro">{% if minha_parte.pago %}✅ Pago{% else %}⏳ Ainda não pago{% endif %}</p>
+    <p class="centro">
+        {% if minha_parte.pago_centavos >= minha_parte.total_centavos %}✅ Pago
+        {% elif minha_parte.pago_centavos > 0 %}🟡 Pagou {{ minha_parte.pago_centavos|reais }}
+        {% else %}⏳ Ainda não pago{% endif %}
+    </p>
     {% else %}
     <p class="centro dica">Prévia: o valor pode mudar até o mês ser fechado.</p>
+    {% endif %}
+    {% if meu_saldo %}
+    <p class="centro">Saldo nos meses fechados:
+        <strong class="{{ 'saldo-positivo' if meu_saldo > 0 else 'erro-texto' }}">{{ meu_saldo|reais }}</strong>
+        <span class="dica">({{ 'crédito' if meu_saldo > 0 else 'devendo' }})</span>
+    </p>
     {% endif %}
 </div>
 {% endif %}
 
+{% for a in avisos %}
+<div class="alerta"><p>⚠️ {{ a }}</p></div>
+{% endfor %}
+
 <div class="card">
     <h3>🧾 Contas do mês</h3>
-    {{ mostrar_erro(erro) }}
     <ul class="lista">
     {% for c in contas %}
         <li class="item-row">
-            <span>{{ c.descricao }} <strong>{{ c.valor_centavos|reais }}</strong></span>
+            <span>{% if c.tipo == 'aluguel' %}🏠{% endif %} {{ c.descricao }} <strong>{{ c.valor_centavos|reais }}</strong></span>
             {% if g.morador.admin and not fechado %}
             <form action="{{ url_for('contas.apagar', conta_id=c.id, mes=mes) }}" method="POST">
                 <button type="submit" class="btn-vermelho" title="Apagar">🗑️</button>
@@ -39,60 +59,108 @@
         <p class="estoque-vazio">Nenhuma conta lançada nesse mês.</p>
     {% endfor %}
     </ul>
-    {% if contas %}<p class="total">Total: <strong>{{ total|reais }}</strong></p>{% endif %}
+    {% if contas %}
+    <p class="total">Aluguel: <strong>{{ total_aluguel|reais }}</strong> · Despesas: <strong>{{ total_despesas|reais }}</strong></p>
+    {% endif %}
 
     {% if g.morador.admin and not fechado %}
     <hr>
     <form action="{{ url_for('contas.nova', mes=mes) }}" method="POST" class="form-row">
-        <input type="text" name="descricao" placeholder="Ex: Aluguel, Luz, Internet" required maxlength="60" style="flex: 2; min-width: 180px;">
-        <input type="text" name="valor" inputmode="decimal" placeholder="R$ 0,00" required style="flex: 1; min-width: 110px;">
+        <select name="tipo" aria-label="Tipo" style="flex: 1; min-width: 110px;">
+            <option value="despesa">Despesa</option>
+            <option value="aluguel">Aluguel</option>
+        </select>
+        <input type="text" name="descricao" placeholder="Ex: Luz, Internet, Dona Eleonora" required maxlength="60" style="flex: 2; min-width: 160px;">
+        <input type="text" name="valor" inputmode="decimal" placeholder="R$ 0,00" required style="flex: 1; min-width: 100px;">
         <button type="submit" class="btn-laranja">Lançar conta</button>
     </form>
+    <p class="dica">Aluguel: metade dividida igual, metade pela ponderação do quarto. Despesas: iguais para todas as vagas.</p>
     {% endif %}
 </div>
 
-<div class="card">
+<div class="card" id="ajustes">
+    <h3>✏️ Ajustes individuais</h3>
+    <ul class="lista">
+    {% for a in ajustes %}
+        <li class="item-row">
+            <span><strong>{{ a.apelido }}</strong> {{ tipos_ajuste[a.tipo] }}{% if a.descricao != tipos_ajuste[a.tipo] %} ({{ a.descricao }}){% endif %}
+                <strong>{{ '−' if a.tipo == 'desconto' else '+' }}{{ a.valor_centavos|reais }}</strong></span>
+            {% if g.morador.admin and not fechado %}
+            <form action="{{ url_for('contas.apagar_ajuste', ajuste_id=a.id, mes=mes) }}" method="POST">
+                <button type="submit" class="btn-vermelho" title="Apagar">🗑️</button>
+            </form>
+            {% endif %}
+        </li>
+    {% else %}
+        <p class="estoque-vazio">Nenhum ajuste nesse mês.</p>
+    {% endfor %}
+    </ul>
+    {% if g.morador.admin and not fechado %}
+    <hr>
+    <form action="{{ url_for('contas.novo_ajuste', mes=mes) }}" method="POST" class="form-row">
+        <select name="morador_id" aria-label="Morador" required style="flex: 1; min-width: 110px;">
+            {% for m in moradores %}<option value="{{ m.id }}">{{ m.apelido }}</option>{% endfor %}
+        </select>
+        <select name="tipo" aria-label="Tipo de ajuste" style="flex: 1; min-width: 110px;">
+            {% for chave, nome in tipos_ajuste.items() %}<option value="{{ chave }}">{{ nome }}</option>{% endfor %}
+        </select>
+        <input type="text" name="descricao" placeholder="Motivo (opcional)" maxlength="60" style="flex: 2; min-width: 140px;">
+        <input type="text" name="valor" inputmode="decimal" placeholder="R$ 0,00" required style="flex: 1; min-width: 100px;">
+        <button type="submit" class="btn-laranja">Adicionar</button>
+    </form>
+    <p class="dica">Outros e pendências somam na parte da pessoa; desconto subtrai.</p>
+    {% endif %}
+</div>
+
+<div class="card" id="divisao">
     <h3>👥 Quanto cada um paga</h3>
-    {% if not divisao %}
-    <p class="estoque-vazio">Nenhum morador ativo.</p>
+    {% if not linhas %}
+    <p class="estoque-vazio">Cadastre os quartos em Moradores para ver a divisão.</p>
     {% endif %}
     <ul class="lista">
-    {% for d in divisao %}
-        <li class="item-row">
+    {% for l in linhas %}
+        {% if loop.first or l.quarto != loop.previtem.quarto %}<li class="quarto-titulo">🛏️ {{ l.quarto }}</li>{% endif %}
+        <li class="item-row {% if l.morador_id == g.morador.id %}minha-linha{% endif %}">
             <span>
-                <strong>{{ d.apelido }}</strong>
-                {% if d.peso != 1 %}<em class="apagado dica">(peso {{ ('%g'|format(d.peso)).replace('.', ',') }})</em>{% endif %}
-                {{ d.valor_centavos|reais }}
+                <strong>{{ l.apelido or 'Vaga livre' }}</strong> {{ l.total_centavos|reais }}
+                <br><span class="dica apagado">{{ detalhe(l) }}</span>
             </span>
-            {% if fechado %}
+            {% if fechado and l.morador_id %}
+                {% set quitado = l.pago_centavos >= l.total_centavos %}
                 {% if g.morador.admin %}
-                <form action="{{ url_for('contas.marcar_pago', morador_id=d.morador_id, mes=mes) }}" method="POST">
-                    {% if d.pago %}
-                    <button type="submit" class="btn-verde">✅ Pago</button>
+                <form action="{{ url_for('contas.registrar_pagamento', vaga=l.vaga, mes=mes) }}" method="POST" class="peso-form">
+                    {% if quitado %}
+                    <input type="hidden" name="valor" value="0">
+                    <button type="submit" class="btn-verde" title="Desmarcar">✅ Pago</button>
                     {% else %}
-                    <button type="submit" class="btn-vermelho">Marcar pago</button>
+                    <input type="text" name="valor" inputmode="decimal" placeholder="tudo" aria-label="Quanto {{ l.apelido }} pagou"
+                           value="{{ (l.pago_centavos|reais)[3:] if l.pago_centavos else '' }}">
+                    <button type="submit" class="btn-vermelho">Pagou</button>
                     {% endif %}
                 </form>
                 {% else %}
-                <span>{% if d.pago %}✅{% else %}⏳{% endif %}</span>
+                <span>{% if quitado %}✅{% elif l.pago_centavos %}🟡{% else %}⏳{% endif %}</span>
                 {% endif %}
             {% endif %}
         </li>
     {% endfor %}
     </ul>
+    {% if linhas %}
+    <p class="total">Soma: <strong>{{ linhas|sum(attribute='total_centavos')|reais }}</strong></p>
+    {% endif %}
 
     {% if g.morador.admin %}
     <hr>
     {% if fechado %}
     <form action="{{ url_for('contas.reabrir', mes=mes) }}" method="POST"
-          onsubmit="return confirm('Reabrir apaga a divisão e quem já pagou. Continuar?');">
+          onsubmit="return confirm('Reabrir apaga a divisão congelada e os pagamentos marcados. Continuar?');">
         <button type="submit" class="btn-vermelho">Reabrir o mês</button>
     </form>
     {% else %}
     <form action="{{ url_for('contas.fechar', mes=mes) }}" method="POST">
         <button type="submit" class="btn-laranja">🔒 Fechar o mês e congelar a divisão</button>
     </form>
-    <p class="dica">Fechar guarda quem estava na casa e os pesos de agora. Depois dá pra marcar quem já pagou.</p>
+    <p class="dica">Fechar guarda os quartos e valores de agora. Depois dá pra marcar quem pagou (vazio = pagou tudo).</p>
     {% endif %}
     {% endif %}
 </div>
