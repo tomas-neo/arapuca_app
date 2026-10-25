@@ -11,6 +11,7 @@ from werkzeug.security import generate_password_hash
 
 from database import conectar_db, inicializar_db
 from modulos.auth import auth_bp
+from modulos.azaralho import azaralho_bp, meus_pontos_do_mes
 from modulos.boiler import boiler_bp
 from modulos.contas import contas_bp
 from modulos.escalas import escalas_bp, minhas_tarefas_hoje
@@ -47,6 +48,7 @@ app.register_blueprint(contas_bp)
 app.register_blueprint(escalas_bp)
 app.register_blueprint(mercado_bp)
 app.register_blueprint(boiler_bp)
+app.register_blueprint(azaralho_bp)
 
 
 @app.route("/sw.js")
@@ -57,7 +59,8 @@ def service_worker():
 
 @app.route("/")
 def home():
-    return render_template("home.html", tarefas=minhas_tarefas_hoje(g.morador["id"]))
+    return render_template("home.html", tarefas=minhas_tarefas_hoje(g.morador["id"]),
+                           meus_pontos=meus_pontos_do_mes(g.morador["id"]))
 
 
 @app.cli.command("criar-admin")

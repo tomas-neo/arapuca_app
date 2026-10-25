@@ -151,6 +151,20 @@ def inicializar_db():
             conn.executemany('INSERT INTO escala_linhas (escala_id, nome) VALUES (?, ?)',
                              [(escala_id, linha) for linha in linhas])
 
+    # Pontos de azaralho: prato sujo, função ou passeio do Buddha não feito...
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS azaralho (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            morador_id INTEGER NOT NULL REFERENCES moradores(id),
+            motivo TEXT NOT NULL CHECK (motivo IN ('prato', 'funcao', 'passeio', 'outro')),
+            descricao TEXT NOT NULL DEFAULT '',
+            data TEXT NOT NULL,
+            pontos INTEGER NOT NULL DEFAULT 1 CHECK (pontos BETWEEN 1 AND 10),
+            registrado_por INTEGER REFERENCES moradores(id),
+            criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     cursor_mercado = conn.execute('SELECT COUNT(*) FROM mercado')
     if cursor_mercado.fetchone()[0] == 0:
         itens_iniciais = [("Papel Higiênico", 4), ("Café", 2), ("Leite", 6), ("Sabão em Pó", 1)]

@@ -237,3 +237,4 @@ hr { border: none; border-top: 1px solid var(--card-border); margin: 20px 0; }
 .quarto-form .num-curto { flex: 0 0 62px; padding: 8px 4px; text-align: center; }
 .quarto-form .num-mini { flex: 0 0 46px; padding: 8px 2px; text-align: center; }
 .quarto-form input[name=nome] { flex: 1 1 auto !important; min-width: 0 !important; }
+.ranking { list-style: none; }
