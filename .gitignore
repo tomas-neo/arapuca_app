@@ -23,3 +23,6 @@ arapuca.db
 
 # Chave secreta das sessões (gerada no primeiro start)
 .secret_key
+
+# Fotos de perfil dos moradores
+fotos/

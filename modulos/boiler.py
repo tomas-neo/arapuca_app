@@ -1,10 +1,16 @@
 from datetime import datetime
 
-from flask import Blueprint, g, redirect, render_template, url_for
+from flask import Blueprint, current_app, g, redirect, render_template, url_for
 
 from database import conectar_db
 
 boiler_bp = Blueprint('boiler', __name__, url_prefix='/boiler')
+
+
+@boiler_bp.before_request
+def em_breve():
+    if not current_app.config.get('BOILER_ATIVO'):
+        return render_template("em_breve.html", nome="Boiler", texto="O controle do boiler está chegando.")
 
 
 @boiler_bp.route("/")

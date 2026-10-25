@@ -46,23 +46,28 @@ def test_escalas_padrao_da_planilha(app):
     assert "Escalar" not in pagina  # morador comum só vê
 
 
-def test_escalar_aparece_na_home_do_dia(app, monkeypatch):
-    import modulos.escalas as escalas
-    monkeypatch.setattr(escalas, "dia_de_hoje", lambda: 2)  # terça
+def test_suas_funcoes_com_prazo(app):
+    from datetime import date
+    from modulos.escalas import minhas_funcoes
     admin = logar(app, "Oca")
     cozinha = ids("SELECT id FROM escala_linhas WHERE nome = 'Cozinha'")
+    passeio = ids("SELECT id FROM escala_linhas WHERE nome = 'Passeio'")
     olinda = ids("SELECT id FROM moradores WHERE apelido = 'Olinda'")
+    admin.post("/escalas/turno", data={"linha_id": cozinha, "dia": 2, "morador_id": olinda})   # terça
+    admin.post("/escalas/turno", data={"linha_id": cozinha, "dia": 2, "morador_id": olinda})   # repetido não duplica
+    admin.post("/escalas/turno", data={"linha_id": passeio, "dia": 2, "morador_id": olinda})
+    assert ids("SELECT COUNT(*) FROM escala_turnos") == 2
 
-    admin.post("/escalas/turno", data={"linha_id": cozinha, "dia": 2, "morador_id": olinda})
-    admin.post("/escalas/turno", data={"linha_id": cozinha, "dia": 2, "morador_id": olinda})  # repetido não duplica
-    assert ids("SELECT COUNT(*) FROM escala_turnos") == 1
-
-    home = logar(app, "Olinda").get("/").text
-    assert 'Cozinha</span><span class="item-sub">Limpeza' in home
-    assert "Folga" in logar(app, "Oca").get("/").text
+    terca, quarta, quinta = date(2026, 10, 27), date(2026, 10, 28), date(2026, 10, 29)
+    no_dia = {f["linha"]: f["prazo"] for f in minhas_funcoes(olinda, terca)}
+    assert no_dia == {"Passeio": "Hoje", "Cozinha": "Hoje ou amanhã"}
+    dia_seguinte = {f["linha"]: f["prazo"] for f in minhas_funcoes(olinda, quarta)}
+    assert dia_seguinte == {"Cozinha": "Último dia (era de terça)"}   # limpeza ganha +1 dia, passeio não
+    assert minhas_funcoes(olinda, quinta) == []
 
     admin.post("/escalas/turno/remover", data={"linha_id": cozinha, "dia": 2, "morador_id": olinda})
-    assert "Folga" in logar(app, "Olinda").get("/").text
+    assert [f["linha"] for f in minhas_funcoes(olinda, terca)] == ["Passeio"]
+    assert "Folga" in logar(app, "Oca").get("/").text
 
 
 def test_morador_comum_nao_edita(app):

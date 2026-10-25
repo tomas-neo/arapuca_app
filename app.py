@@ -14,9 +14,10 @@ from modulos.auth import auth_bp
 from modulos.azaralho import azaralho_bp, meus_pontos_do_mes
 from modulos.boiler import boiler_bp
 from modulos.contas import contas_bp
-from modulos.icones import ICONE_MOTIVO, icone, icone_escala
-from modulos.escalas import escalas_bp, minhas_tarefas_hoje
+from modulos.icones import ICONE_MOTIVO, avatar, icone, icone_escala
+from modulos.escalas import escalas_bp, minhas_funcoes
 from modulos.mercado import mercado_bp
+from modulos import planilha
 from modulos.moradores import moradores_bp
 
 PASTA = Path(__file__).resolve().parent
@@ -37,12 +38,16 @@ def carregar_chave_secreta():
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=carregar_chave_secreta(),
-    PERMANENT_SESSION_LIFETIME=timedelta(days=90),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=365),  # celular fica logado; renova a cada acesso
+    MAX_CONTENT_LENGTH=12 * 1024 * 1024,  # foto de perfil
+    SINCRONIZAR_PLANILHA=os.environ.get("ARAPUCA_SINCRONIZAR", "1") == "1",  # escalas da planilha do Drive
+    AZARALHO_ATIVO=os.environ.get("ARAPUCA_AZARALHO", "0") == "1",  # em quarentena por enquanto
+    BOILER_ATIVO=os.environ.get("ARAPUCA_BOILER", "0") == "1",  # em breve
     SESSION_COOKIE_SAMESITE="Lax",
 )
 
 inicializar_db()
-app.jinja_env.globals.update(icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
+app.jinja_env.globals.update(avatar=avatar, icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(moradores_bp)
@@ -61,8 +66,9 @@ def service_worker():
 
 @app.route("/")
 def home():
-    return render_template("home.html", tarefas=minhas_tarefas_hoje(g.morador["id"]),
-                           meus_pontos=meus_pontos_do_mes(g.morador["id"]))
+    planilha.sincronizar_se_preciso(app.config["SINCRONIZAR_PLANILHA"])
+    return render_template("home.html", tarefas=minhas_funcoes(g.morador["id"]),
+                           meus_pontos=meus_pontos_do_mes(g.morador["id"]) if app.config["AZARALHO_ATIVO"] else 0)
 
 
 @app.cli.command("criar-admin")

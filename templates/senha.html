@@ -4,6 +4,21 @@
 {% block subtitulo %}{{ 'Admin da casa' if g.morador.admin else 'Morador' }}{% endblock %}
 {% block titulo_topo %}{{ g.morador.apelido }}{% endblock %}
 {% block conteudo %}
+<div class="card perfil-foto">
+    {{ avatar(g.morador.id, g.morador.apelido, g.morador.foto_versao, 'foto-grande') }}
+    <form action="{{ url_for('auth.enviar_foto') }}" method="POST" enctype="multipart/form-data" id="form-foto">
+        <label class="botao btn-claro btn-pequeno" style="margin: 0; color: var(--laranja-escuro);">
+            {{ icone('camera') }} {{ 'Trocar foto' if g.morador.foto_versao else 'Colocar foto' }}
+            <input type="file" name="foto" accept="image/*" hidden onchange="this.form.submit()">
+        </label>
+    </form>
+    {% if g.morador.foto_versao %}
+    <form action="{{ url_for('auth.remover_foto') }}" method="POST">
+        <button type="submit" class="btn-pequeno" style="background: none; color: var(--texto-suave);">Tirar foto</button>
+    </form>
+    {% endif %}
+    <p class="dica" style="margin: 0;">Você fica conectado neste aparelho. Só sai se apertar "Sair".</p>
+</div>
 <div class="card">
     <h3>{{ icone('chave') }} Trocar senha</h3>
     {{ mostrar_erro(erro) }}

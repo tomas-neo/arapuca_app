@@ -69,6 +69,10 @@ def inicializar_db():
     conn.executemany('INSERT OR IGNORE INTO config (chave, valor) VALUES (?, ?)',
                      [("caixinha_centavos", "5000"), ("fracao_area_comum", "0.5")])
 
+    # Foto de perfil: foto_versao 0 = sem foto; muda a cada troca (evita cache velho no celular)
+    if 'foto_versao' not in [c['name'] for c in conn.execute('PRAGMA table_info(moradores)')]:
+        conn.execute('ALTER TABLE moradores ADD COLUMN foto_versao INTEGER NOT NULL DEFAULT 0')
+
     # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento).
     # tipo: 'aluguel' (vai metade área comum, metade quartos) ou 'despesa' (igual por vaga)
     conn.execute('''
@@ -141,13 +145,18 @@ def inicializar_db():
             PRIMARY KEY (linha_id, dia, morador_id)
         )
     ''')
+    # prazo_dias: quantos dias depois do dia escalado ainda dá pra fazer (limpeza = 1)
+    if 'prazo_dias' not in [c['name'] for c in conn.execute('PRAGMA table_info(escalas)')]:
+        conn.execute('ALTER TABLE escalas ADD COLUMN prazo_dias INTEGER NOT NULL DEFAULT 0')
+        conn.execute("UPDATE escalas SET prazo_dias = 1 WHERE nome = 'Limpeza'")
     if conn.execute('SELECT COUNT(*) FROM escalas').fetchone()[0] == 0:
         # Mesmas escalas da planilha "Funções - Arapuca"
         padrao = [("Limpeza", "", ["Cozinha", "Garagem"]),
                   ("Passeio do Buddha", "", ["Passeio"]),
                   ("Lavar roupa", "", ["1ª máquina", "2ª máquina"])]
         for nome, icone, linhas in padrao:
-            escala_id = conn.execute('INSERT INTO escalas (nome, icone) VALUES (?, ?)', (nome, icone)).lastrowid
+            escala_id = conn.execute('INSERT INTO escalas (nome, icone, prazo_dias) VALUES (?, ?, ?)',
+                                     (nome, icone, 1 if nome == "Limpeza" else 0)).lastrowid
             conn.executemany('INSERT INTO escala_linhas (escala_id, nome) VALUES (?, ?)',
                              [(escala_id, linha) for linha in linhas])
 

@@ -1,6 +1,8 @@
+import time
 from functools import wraps
+from pathlib import Path
 
-from flask import Blueprint, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, g, redirect, render_template, request, send_file, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import conectar_db
@@ -14,7 +16,7 @@ ROTAS_PUBLICAS = {'auth.login', 'static', 'service_worker'}
 def buscar_morador(morador_id):
     conn = conectar_db()
     morador = conn.execute(
-        'SELECT id, apelido, admin FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
+        'SELECT id, apelido, admin, foto_versao FROM moradores WHERE id = ? AND ativo = 1', (morador_id,)
     ).fetchone()
     conn.close()
     return morador
@@ -107,3 +109,55 @@ def trocar_senha():
         conn.close()
 
     return render_template("senha.html", erro=erro, sucesso=sucesso)
+
+
+# ---------- foto de perfil ----------
+
+PASTA_FOTOS = Path("fotos")  # junto do arapuca.db
+TAMANHO_FOTO = 320
+
+
+def caminho_foto(morador_id):
+    return PASTA_FOTOS / f"{morador_id}.jpg"
+
+
+@auth_bp.route("/perfil/foto", methods=["POST"])
+def enviar_foto():
+    from PIL import Image, ImageOps, UnidentifiedImageError
+
+    arquivo = request.files.get("foto")
+    if not arquivo or not arquivo.filename:
+        return render_template("senha.html", erro="Escolha uma foto", sucesso=False), 400
+    try:
+        imagem = Image.open(arquivo.stream)
+        imagem = ImageOps.exif_transpose(imagem).convert("RGB")  # gira certo foto de celular
+        imagem = ImageOps.fit(imagem, (TAMANHO_FOTO, TAMANHO_FOTO), Image.LANCZOS)
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        return render_template("senha.html", erro="Não consegui abrir essa imagem", sucesso=False), 400
+
+    PASTA_FOTOS.mkdir(exist_ok=True)
+    imagem.save(caminho_foto(g.morador['id']), "JPEG", quality=85)
+    conn = conectar_db()
+    conn.execute('UPDATE moradores SET foto_versao = ? WHERE id = ?', (int(time.time()), g.morador['id']))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('auth.trocar_senha'))
+
+
+@auth_bp.route("/perfil/foto/remover", methods=["POST"])
+def remover_foto():
+    caminho_foto(g.morador['id']).unlink(missing_ok=True)
+    conn = conectar_db()
+    conn.execute('UPDATE moradores SET foto_versao = 0 WHERE id = ?', (g.morador['id'],))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('auth.trocar_senha'))
+
+
+@auth_bp.route("/fotos/<int:morador_id>.jpg")
+def foto(morador_id):
+    caminho = caminho_foto(morador_id)
+    if not caminho.exists():
+        abort(404)
+    resposta = send_file(caminho.resolve(), mimetype="image/jpeg", max_age=60 * 60 * 24 * 30)
+    return resposta

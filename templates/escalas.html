@@ -1,101 +1,84 @@
 {% extends "base.html" %}
 {% from "_macros.html" import erro as mostrar_erro %}
 {% block titulo %}Escalas{% endblock %}
-{% block subtitulo %}Hoje é {{ dias[hoje]|lower }}{% endblock %}
+{% block subtitulo %}{{ dias[0].nome }}, {{ dias[0].data }}{% endblock %}
 {% block conteudo %}
 {{ mostrar_erro(erro) }}
+{% if ok %}<div class="alerta alerta-ok">{{ icone('certo') }}<p>{{ ok }}</p></div>{% endif %}
+
+{% macro lista_funcoes(funcoes) %}
+<ul class="lista">
+{% for f in funcoes %}
+    <li class="item-row">
+        <span class="bolha">{{ icone(icone_escala(f.escala)) }}</span>
+        <span class="item-texto"><span class="item-titulo">{{ f.linha }}</span><span class="item-sub">{{ f.escala }}</span></span>
+        <span class="etiqueta {{ 'etiqueta-perigo' if f.urgente }}">{{ f.prazo }}</span>
+    </li>
+{% else %}
+    <p class="vazio">Nada pra você hoje. Folga.</p>
+{% endfor %}
+</ul>
+{% endmacro %}
 
 <div class="card">
-    <h3>{{ icone('relogio') }} Hoje na casa</h3>
-    <ul class="lista">
-    {% for t in hoje_na_casa %}
-        <li class="item-row{% if t.morador_id == g.morador.id %} minha-linha{% endif %}">
-            <span class="bolha">{{ icone(icone_escala(t.escala)) }}</span>
-            <span class="item-texto"><span class="item-titulo">{{ t.apelido }}</span><span class="item-sub">{{ t.escala }} · {{ t.linha }}</span></span>
-            {% if t.morador_id == g.morador.id %}<span class="etiqueta">Você</span>{% endif %}
-        </li>
-    {% else %}
-        <p class="vazio">Ninguém escalado pra hoje.</p>
-    {% endfor %}
-    </ul>
+    <h3>{{ icone('certo') }} Suas funções</h3>
+    {{ lista_funcoes(funcoes) }}
+    <p class="dica" style="margin: 10px 0 0;">Limpeza pode ser feita no dia ou no seguinte. Máquina e passeio do Buddha são só no dia.</p>
 </div>
 
-{% for e in escalas %}
-<div class="card" id="escala-{{ e.id }}">
-    <h3>{{ icone(icone_escala(e.nome)) }} {{ e.nome }}</h3>
-    {% for dia in range(7) %}
-    <div class="dia{% if dia == hoje %} dia-hoje{% endif %}">
-        <div class="dia-nome">{{ dias[dia] }}</div>
-        <div class="chips">
-        {% for t in e.por_dia[dia] %}
-            <span class="chip{% if t.morador_id == g.morador.id %} chip-meu{% endif %}">
-                {% if e.linhas|length > 1 %}<em>{{ t.linha }}</em> {% endif %}{{ t.apelido }}
-                {% if g.morador.admin %}
-                <form action="{{ url_for('escalas.remover_turno') }}" method="POST">
-                    <input type="hidden" name="escala_id" value="{{ e.id }}">
-                    <input type="hidden" name="linha_id" value="{{ t.linha_id }}">
-                    <input type="hidden" name="dia" value="{{ dia }}">
-                    <input type="hidden" name="morador_id" value="{{ t.morador_id }}">
-                    <button type="submit" class="chip-x" title="Tirar" aria-label="Tirar {{ t.apelido }}">{{ icone('fechar') }}</button>
-                </form>
-                {% endif %}
-            </span>
-        {% else %}
-            <span class="apagado dica" style="padding-top: 4px;">ninguém</span>
+<div class="card">
+    <h3>{{ icone('casa') }} Na casa</h3>
+    <div class="dias" role="tablist">
+        {% for d in dias %}
+        <button type="button" class="dia-aba{{ ' ativa' if loop.first }}" data-dia="{{ loop.index0 }}" role="tab">
+            <strong>{{ d.rotulo }}</strong><small>{{ d.data }}</small>
+        </button>
         {% endfor %}
+    </div>
+    {% for d in dias %}
+    <div class="dia-painel" data-dia="{{ loop.index0 }}"{% if not loop.first %} hidden{% endif %}>
+        {% for grupo in d.grupos %}
+        <div class="grupo">
+            <div class="grupo-titulo">{{ icone(icone_escala(grupo.escala)) }} {{ grupo.escala }}</div>
+            {% for linha, turnos in grupo.linhas.items() %}
+            <div class="escala-linha">
+                <span class="escala-area">{{ linha }}</span>
+                <span class="escala-nomes">
+                    {% for t in turnos %}<span class="{{ 'eu' if t.morador_id == g.morador.id }}">{{ t.apelido }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+                </span>
+            </div>
+            {% else %}
+            <div class="escala-linha"><span class="escala-area apagado">Ninguém escalado</span></div>
+            {% endfor %}
         </div>
+        {% endfor %}
     </div>
     {% endfor %}
-
-    {% if g.morador.admin %}
-    <hr>
-    <form action="{{ url_for('escalas.adicionar_turno') }}" method="POST" class="form-escala">
-        <input type="hidden" name="escala_id" value="{{ e.id }}">
-        {% if e.linhas|length > 1 %}
-        <select name="linha_id" required>
-            {% for l in e.linhas %}<option value="{{ l.id }}">{{ l.nome }}</option>{% endfor %}
-        </select>
-        {% elif e.linhas %}
-        <input type="hidden" name="linha_id" value="{{ e.linhas[0].id }}">
-        {% endif %}
-        <select name="dia" required>
-            {% for d in range(7) %}<option value="{{ d }}"{% if d == hoje %} selected{% endif %}>{{ dias[d] }}</option>{% endfor %}
-        </select>
-        <select name="morador_id" required>
-            <option value="" disabled selected>Morador...</option>
-            {% for m in moradores %}<option value="{{ m.id }}">{{ m.apelido }}</option>{% endfor %}
-        </select>
-        <button type="submit" class="btn-laranja"{% if not e.linhas %} disabled{% endif %}>Escalar</button>
-    </form>
-    <details class="ajustes">
-        <summary>Ajustar linhas</summary>
-        <ul class="lista">
-        {% for l in e.linhas %}
-            <li class="item-row">
-                <span>{{ l.nome }}</span>
-                <form action="{{ url_for('escalas.apagar_linha', linha_id=l.id) }}" method="POST"
-                      onsubmit='return confirm({{ ("Apagar " ~ l.nome ~ " e quem está escalado nela?")|tojson }});'>
-                    <button type="submit" class="btn-vermelho btn-icone" title="Apagar" aria-label="Apagar {{ l.nome }}">{{ icone('lixo') }}</button>
-                </form>
-            </li>
-        {% endfor %}
-        </ul>
-        <form action="{{ url_for('escalas.adicionar_linha', escala_id=e.id) }}" method="POST" class="form-row" style="margin-top: 12px;">
-            <input type="text" name="nome" placeholder="Nova linha (ex: Banheiro)" maxlength="30" required style="flex: 1; min-width: 0;">
-            <button type="submit" class="btn-claro btn-icone" aria-label="Adicionar linha">{{ icone('mais') }}</button>
-        </form>
-    </details>
-    {% endif %}
 </div>
-{% endfor %}
 
 {% if g.morador.admin %}
 <div class="card">
-    <h3>{{ icone('mais') }} Nova escala</h3>
-    <form action="{{ url_for('escalas.nova_escala') }}" method="POST" class="form-row">
-        <input type="text" name="nome" placeholder="Ex: Tirar o lixo" maxlength="40" required style="flex: 1; min-width: 0;">
-        <button type="submit" class="btn-laranja btn-pequeno">Criar</button>
+    <h3>{{ icone('lista') }} Planilha "Funções - Arapuca"</h3>
+    <p class="dica">
+        {% if sync.em %}Atualizado em {{ sync.em.strftime('%d/%m às %H:%M') }}. O app confere a planilha sozinho a cada hora.
+        {% else %}Ainda não puxei a planilha.{% endif %}
+    </p>
+    {% if sync.erro %}<div class="alerta alerta-critico">{{ icone('alerta') }}<p>{{ sync.erro }}</p></div>{% endif %}
+    {% if sync.nao_achados %}
+    <div class="alerta">{{ icone('alerta') }}<p>Nomes da planilha sem morador no app: {{ sync.nao_achados|join(', ') }}. Crie o morador com o mesmo apelido.</p></div>
+    {% endif %}
+    <form action="{{ url_for('escalas.sincronizar') }}" method="POST">
+        <button type="submit" class="btn-claro">{{ icone('historico') }} Atualizar agora</button>
     </form>
 </div>
 {% endif %}
+
+<script>
+document.querySelectorAll('.dia-aba').forEach(function (aba) {
+    aba.addEventListener('click', function () {
+        document.querySelectorAll('.dia-aba').forEach(function (a) { a.classList.toggle('ativa', a === aba); });
+        document.querySelectorAll('.dia-painel').forEach(function (p) { p.hidden = p.dataset.dia !== aba.dataset.dia; });
+    });
+});
+</script>
 {% endblock %}

@@ -36,6 +36,7 @@ ICONES = {
     "caixa": '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/>',
     "energia": '<path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/>',
     "historico": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/>',
+    "camera": '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
     "escudo": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
 }
 
@@ -60,3 +61,14 @@ def icone_escala(nome):
     if "limp" in nome or "lixo" in nome or "faxina" in nome:
         return "brilho"
     return "lista"
+
+
+def avatar(morador_id, apelido, foto_versao=0, classe=""):
+    """Foto do morador, ou a inicial do apelido num círculo quando não tem foto."""
+    from flask import url_for
+    from markupsafe import escape
+    if foto_versao:
+        src = url_for("auth.foto", morador_id=morador_id, v=foto_versao)
+        return Markup(f'<img src="{src}" alt="" class="foto {classe}">')
+    inicial = escape((apelido or "?")[:1].upper())
+    return Markup(f'<span class="foto foto-inicial {classe}">{inicial}</span>')

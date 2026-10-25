@@ -341,3 +341,46 @@ button:disabled { opacity: 0.5; cursor: default; }
 .quarto-form .num-mini { flex: 0 0 38px; }
 .quarto-form .dica { font-size: 11.5px; }
 .peso-form select { max-width: 128px; }
+
+/* ---------- fotos ---------- */
+.foto { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; }
+.foto-inicial { background: #fff; color: var(--laranja-escuro); font-weight: 600; }
+.avatar { overflow: hidden; padding: 0; }
+.foto-grande { width: 96px; height: 96px; font-size: 38px; box-shadow: 0 8px 20px rgba(196, 96, 20, 0.18); }
+.foto-grande.foto-inicial { background: var(--laranja-suave); }
+.perfil-foto { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.foto-mini { width: 32px; height: 32px; flex: 0 0 32px; font-size: 13px; }
+.foto-mini.foto-inicial { background: var(--laranja-suave); }
+
+/* ---------- escalas: dias em retângulos ---------- */
+.dias { display: flex; gap: 6px; overflow-x: auto; margin: 0 -4px 14px; padding: 0 4px 2px; scrollbar-width: none; }
+.dias::-webkit-scrollbar { display: none; }
+.dia-aba {
+    flex: 0 0 auto; width: auto; min-width: 58px;
+    display: flex; flex-direction: column; gap: 0;
+    padding: 7px 10px; border-radius: 12px;
+    background: var(--campo); color: var(--texto-suave);
+    font-size: 12.5px; line-height: 1.25;
+}
+.dia-aba strong { font-weight: 600; color: var(--texto); }
+.dia-aba small { font-size: 11px; }
+.dia-aba.ativa { background: var(--degrade); color: rgba(255, 255, 255, 0.9); box-shadow: 0 6px 14px rgba(255, 106, 0, 0.25); }
+.dia-aba.ativa strong { color: #fff; }
+.grupo { margin-bottom: 12px; }
+.grupo:last-child { margin-bottom: 0; }
+.grupo-titulo { display: flex; align-items: center; gap: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--texto-suave); margin-bottom: 4px; }
+.grupo-titulo .ic { width: 16px; height: 16px; color: var(--laranja); }
+.escala-linha {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 7px 12px; border-radius: 10px; font-size: 14px;
+}
+.escala-linha:nth-child(even) { background: var(--campo); }
+.escala-area { color: var(--texto-suave); }
+.escala-nomes { text-align: right; font-weight: 500; }
+.escala-nomes .eu { color: var(--laranja-escuro); font-weight: 600; }
+.atalho-off { opacity: 0.55; }
+
+/* ---------- contas ---------- */
+.aluguel-rep { display: flex; align-items: center; justify-content: space-between; background: var(--laranja-suave); border-radius: 16px; padding: 14px 16px; }
+.aluguel-rep strong { display: block; font-size: 22px; font-weight: 700; color: var(--texto); }
+.gastos .item-row { padding: 9px 0; }

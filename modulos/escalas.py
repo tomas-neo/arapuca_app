@@ -1,24 +1,31 @@
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 
-from flask import Blueprint, abort, g, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, g, redirect, render_template, request, url_for
 
 from database import conectar_db
 from modulos.auth import somente_admin
+from modulos import planilha
 
 escalas_bp = Blueprint('escalas', __name__, url_prefix='/escalas')
 
 # 0 = domingo, igual à planilha da casa
 DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+DIAS_CURTOS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
+
+
+def dia_da_semana(data):
+    return (data.weekday() + 1) % 7  # weekday(): segunda = 0
 
 
 def dia_de_hoje():
-    return (date.today().weekday() + 1) % 7  # weekday(): segunda = 0
+    return dia_da_semana(date.today())
 
 
 def turnos_do_dia(conn, dia, morador_id=None):
     """Lista o que cada um faz no dia: escala, linha e apelido."""
-    sql = '''SELECT e.icone, e.nome AS escala, l.nome AS linha, m.apelido, m.id AS morador_id
+    sql = '''SELECT e.icone, e.nome AS escala, e.prazo_dias, l.nome AS linha,
+                    m.apelido, m.id AS morador_id, m.foto_versao
              FROM escala_turnos t
              JOIN escala_linhas l ON l.id = t.linha_id
              JOIN escalas e ON e.id = l.escala_id
@@ -31,11 +38,46 @@ def turnos_do_dia(conn, dia, morador_id=None):
     return conn.execute(sql + ' ORDER BY e.id, l.id, m.apelido', args).fetchall()
 
 
-def minhas_tarefas_hoje(morador_id):
+def minhas_funcoes(morador_id, hoje=None):
+    """O que o morador tem que fazer hoje, contando o prazo extra da limpeza (dia + 1)."""
+    hoje = hoje or date.today()
     conn = conectar_db()
-    tarefas = turnos_do_dia(conn, dia_de_hoje(), morador_id)
+    funcoes = []
+    for atraso in (0, 1):  # escalado hoje ou ontem
+        dia = hoje - timedelta(days=atraso)
+        for t in turnos_do_dia(conn, dia_da_semana(dia), morador_id):
+            if atraso > t['prazo_dias']:
+                continue
+            if t['prazo_dias'] == 0:
+                prazo, urgente = "Hoje", True
+            elif atraso == 0:
+                prazo, urgente = "Hoje ou amanhã", False
+            else:
+                prazo, urgente = f"Último dia (era de {DIAS[dia_da_semana(dia)].lower()})", True
+            funcoes.append({'escala': t['escala'], 'linha': t['linha'], 'prazo': prazo, 'urgente': urgente})
     conn.close()
-    return tarefas
+    funcoes.sort(key=lambda f: not f['urgente'])
+    return funcoes
+
+
+def proximos_dias(conn, hoje, quantos=7):
+    """Os próximos dias com quem faz o quê, agrupado por escala e linha."""
+    escalas = conn.execute('SELECT id, nome FROM escalas ORDER BY id').fetchall()
+    dias = []
+    for i in range(quantos):
+        data = hoje + timedelta(days=i)
+        turnos = turnos_do_dia(conn, dia_da_semana(data))
+        grupos = []
+        for e in escalas:
+            linhas = {}
+            for t in turnos:
+                if t['escala'] == e['nome']:
+                    linhas.setdefault(t['linha'], []).append(t)
+            grupos.append({'escala': e['nome'], 'linhas': linhas})
+        rotulo = "Hoje" if i == 0 else "Amanhã" if i == 1 else DIAS_CURTOS[dia_da_semana(data)]
+        dias.append({'rotulo': rotulo, 'curto': DIAS_CURTOS[dia_da_semana(data)],
+                     'data': data.strftime("%d/%m"), 'nome': DIAS[dia_da_semana(data)], 'grupos': grupos})
+    return dias
 
 
 def montar_escala(conn, escala):
@@ -60,15 +102,22 @@ def montar_escala(conn, escala):
 
 @escalas_bp.route("/")
 def index():
+    planilha.sincronizar_se_preciso(current_app.config.get('SINCRONIZAR_PLANILHA', True))
     conn = conectar_db()
-    hoje = dia_de_hoje()
-    escalas = [montar_escala(conn, e) for e in conn.execute('SELECT * FROM escalas ORDER BY id')]
-    moradores = conn.execute('SELECT id, apelido FROM moradores WHERE ativo = 1 ORDER BY apelido').fetchall()
-    hoje_na_casa = turnos_do_dia(conn, hoje)
+    dias = proximos_dias(conn, date.today())
+    sync = planilha.status(conn)
     conn.close()
-    return render_template("escalas.html", escalas=escalas, dias=DIAS, hoje=hoje,
-                           hoje_na_casa=hoje_na_casa, moradores=moradores,
-                           erro=request.args.get('erro', ''))
+    return render_template("escalas.html", dias=dias, funcoes=minhas_funcoes(g.morador['id']),
+                           sync=sync, erro=request.args.get('erro', ''), ok=request.args.get('ok', ''))
+
+
+@escalas_bp.route("/sincronizar", methods=["POST"])
+@somente_admin
+def sincronizar():
+    resultado = planilha.sincronizar()
+    if resultado['erros']:
+        return redirect(url_for('escalas.index', erro="Não consegui ler: " + "; ".join(resultado['erros'])))
+    return redirect(url_for('escalas.index', ok="Escalas atualizadas da planilha"))
 
 
 def ler_int(nome, minimo=None, maximo=None):

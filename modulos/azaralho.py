@@ -1,13 +1,19 @@
 import re
 from datetime import date, timedelta
 
-from flask import Blueprint, abort, g, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, abort, g, redirect, render_template, request, url_for
 
 from database import conectar_db
 from modulos.contas import deslocar_mes, mes_valido, nome_mes
 from modulos.escalas import DIAS, turnos_do_dia
 
 azaralho_bp = Blueprint('azaralho', __name__, url_prefix='/azaralho')
+
+
+@azaralho_bp.before_request
+def em_breve():
+    if not current_app.config.get('AZARALHO_ATIVO'):
+        return render_template("em_breve.html", nome="Azaralho", texto="Os pontos de azaralho estão sendo repensados. Voltam numa próxima versão.")
 
 MOTIVOS = {"prato": "Prato sujo", "funcao": "Função não feita",
            "passeio": "Passeio do Buddha não feito", "outro": "Outro"}
