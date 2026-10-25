@@ -1,2 +1,9 @@
-{% macro erro(texto) %}{% if texto %}<div class="alerta alerta-critico"><h3>{{ texto }}</h3></div>{% endif %}{% endmacro %}
-{% macro voltar() %}<a href="{{ url_for('home') }}" class="botao-menu">🏠 Voltar para o início</a>{% endmacro %}
+{% macro erro(texto) %}{% if texto %}<div class="alerta alerta-critico">{{ icone('alerta') }}<p>{{ texto }}</p></div>{% endif %}{% endmacro %}
+{% macro voltar() %}{% endmacro %}
+{% macro mes_nav(endpoint, nome_mes, anterior, proximo) %}
+<div class="mes-nav">
+    <a href="{{ url_for(endpoint, mes=anterior) }}" aria-label="Mês anterior">{{ icone('voltar') }}</a>
+    <strong>{{ nome_mes }}</strong>
+    <a href="{{ url_for(endpoint, mes=proximo) }}" aria-label="Próximo mês">{{ icone('seguir') }}</a>
+</div>
+{% endmacro %}

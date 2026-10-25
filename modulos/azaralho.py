@@ -9,8 +9,8 @@ from modulos.escalas import DIAS, turnos_do_dia
 
 azaralho_bp = Blueprint('azaralho', __name__, url_prefix='/azaralho')
 
-MOTIVOS = {"prato": "🍽️ Prato sujo", "funcao": "🧹 Função não feita",
-           "passeio": "🐕 Passeio do Buddha não feito", "outro": "⚠️ Outro"}
+MOTIVOS = {"prato": "Prato sujo", "funcao": "Função não feita",
+           "passeio": "Passeio do Buddha não feito", "outro": "Outro"}
 
 
 def dia_da_semana(dia):

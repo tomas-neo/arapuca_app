@@ -58,7 +58,7 @@ def test_escalar_aparece_na_home_do_dia(app, monkeypatch):
     assert ids("SELECT COUNT(*) FROM escala_turnos") == 1
 
     home = logar(app, "Olinda").get("/").text
-    assert "Limpeza · Cozinha" in home
+    assert 'Cozinha</span><span class="item-sub">Limpeza' in home
     assert "Folga" in logar(app, "Oca").get("/").text
 
     admin.post("/escalas/turno/remover", data={"linha_id": cozinha, "dia": 2, "morador_id": olinda})

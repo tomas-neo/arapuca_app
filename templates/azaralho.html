@@ -1,49 +1,47 @@
 {% extends "base.html" %}
-{% from "_macros.html" import erro as mostrar_erro, voltar %}
+{% from "_macros.html" import erro as mostrar_erro, mes_nav %}
 {% block titulo %}Azaralho{% endblock %}
+{% block subtitulo %}Pontos de{% endblock %}
+{% block topo_extra %}{{ mes_nav('azaralho.index', nome_mes, anterior, proximo) }}{% endblock %}
 {% block conteudo %}
-<h2>💀 Pontos de azaralho</h2>
-
-<div class="form-row navegar-mes">
-    <a href="{{ url_for('azaralho.index', mes=anterior) }}" class="botao-mes">◀</a>
-    <strong>{{ nome_mes }}</strong>
-    <a href="{{ url_for('azaralho.index', mes=proximo) }}" class="botao-mes">▶</a>
-</div>
-
 {{ mostrar_erro(erro) }}
 
-<div class="card destaque">
-    <h3>🏆 Ranking do mês</h3>
+<div class="card">
+    <h3>{{ icone('medalha') }} Ranking do mês</h3>
     {% set com_pontos = ranking|selectattr('pontos')|list %}
     {% set zerados = ranking|rejectattr('pontos')|map(attribute='apelido')|list %}
-    <ol class="lista ranking">
+    <ol class="lista">
     {% for r in com_pontos %}
         <li class="item-row {% if r.id == g.morador.id %}minha-linha{% endif %}">
-            <span>{% if loop.first %}👑 {% endif %}<strong>{{ r.apelido }}</strong></span>
-            <span class="erro-texto"><strong>{{ r.pontos }}</strong> {{ 'ponto' if r.pontos == 1 else 'pontos' }}</span>
+            <span class="bolha {{ 'bolha-perigo' if loop.first }}"><strong>{{ loop.index }}</strong></span>
+            <span class="item-texto"><span class="item-titulo">{{ r.apelido }}</span></span>
+            <span class="etiqueta etiqueta-perigo">{{ r.pontos }} {{ 'ponto' if r.pontos == 1 else 'pontos' }}</span>
         </li>
     {% endfor %}
     </ol>
-    {% if zerados %}<p class="dica apagado">😇 Zerados: {{ zerados|join(', ') }}</p>{% endif %}
+    {% if not com_pontos %}<p class="vazio">Ninguém tomou ponto nesse mês.</p>{% endif %}
+    {% if zerados and com_pontos %}<hr>{% endif %}
+    {% if zerados %}<p class="dica" style="margin: 0;">Zerados: {{ zerados|join(', ') }}</p>{% endif %}
 </div>
 
 {% if cobrar %}
 <div class="card">
-    <h3>📋 Funções de ontem e de hoje</h3>
+    <h3>{{ icone('calendario') }} Funções de ontem e de hoje</h3>
     <p class="dica">Alguém não fez? Um toque dá 1 ponto.</p>
     <ul class="lista">
     {% for c in cobrar %}
         <li class="item-row">
-            <span><span class="dica apagado">{{ c.nome_dia }}</span><br>{{ c.icone }} {{ c.descricao }} · <strong>{{ c.apelido }}</strong></span>
+            <span class="bolha">{{ icone(icone_motivo[c.motivo]) }}</span>
+            <span class="item-texto"><span class="item-titulo">{{ c.apelido }}</span><span class="item-sub">{{ c.nome_dia }} · {{ c.descricao }}</span></span>
             {% if c.ja_marcado %}
-            <span class="erro-texto dica">❌ marcado</span>
+            <span class="etiqueta etiqueta-perigo">Marcado</span>
             {% else %}
             <form action="{{ url_for('azaralho.novo') }}" method="POST">
                 <input type="hidden" name="morador_id" value="{{ c.morador_id }}">
                 <input type="hidden" name="motivo" value="{{ c.motivo }}">
                 <input type="hidden" name="descricao" value="{{ c.descricao }}">
                 <input type="hidden" name="data" value="{{ c.dia }}">
-                <button type="submit" class="btn-vermelho" style="width:auto">Não fez</button>
+                <button type="submit" class="btn-vermelho btn-pequeno">Não fez</button>
             </form>
             {% endif %}
         </li>
@@ -53,47 +51,46 @@
 {% endif %}
 
 <div class="card">
-    <h3>➕ Dar ponto</h3>
+    <h3>{{ icone('mais') }} Dar ponto</h3>
     <form action="{{ url_for('azaralho.novo') }}" method="POST">
         <div class="form-row">
-            <select name="morador_id" aria-label="Quem" required style="flex: 1; min-width: 120px;">
+            <select name="morador_id" aria-label="Quem" required style="flex: 1; min-width: 0;">
                 {% for m in moradores %}<option value="{{ m.id }}">{{ m.apelido }}</option>{% endfor %}
             </select>
-            <select name="motivo" aria-label="Motivo" style="flex: 2; min-width: 160px;">
+            <select name="motivo" aria-label="Motivo" style="flex: 1.4; min-width: 0;">
                 {% for chave, nome in motivos.items() %}<option value="{{ chave }}">{{ nome }}</option>{% endfor %}
             </select>
         </div>
+        <input type="text" name="descricao" class="campo" placeholder="Detalhe (opcional): ex. panela na pia" maxlength="80">
         <div class="form-row">
-            <input type="text" name="descricao" placeholder="Detalhe (opcional): ex. panela na pia" maxlength="80" style="flex: 2; min-width: 160px;">
-            <input type="date" name="data" value="{{ hoje }}" max="{{ hoje }}" aria-label="Dia" style="flex: 1; min-width: 130px;">
-            <input type="number" name="pontos" value="1" min="1" max="10" aria-label="Pontos" style="flex: 0 0 64px;">
+            <input type="date" name="data" value="{{ hoje }}" max="{{ hoje }}" aria-label="Dia" style="flex: 1; min-width: 0;">
+            <input type="number" name="pontos" value="1" min="1" max="10" aria-label="Pontos" style="flex: 0 0 76px; text-align: center;">
         </div>
         <button type="submit" class="btn-laranja">Dar ponto</button>
     </form>
-    <p class="dica">Qualquer um pode dar ponto e fica registrado quem deu. Quem deu (ou um admin) pode tirar.</p>
+    <p class="dica" style="margin-top: 10px;">Qualquer um pode dar ponto e fica registrado quem deu. Quem deu (ou um admin) pode tirar.</p>
 </div>
 
 <div class="card">
-    <h3>📜 Histórico</h3>
+    <h3>{{ icone('historico') }} Histórico</h3>
     <ul class="lista">
     {% for h in historico %}
         <li class="item-row">
-            <span>
-                <strong>{{ h.apelido }}</strong> +{{ h.pontos }} · {{ motivos[h.motivo] }}
-                <br><span class="dica apagado">{{ h.data[8:10] }}/{{ h.data[5:7] }}{% if h.descricao %} · {{ h.descricao }}{% endif %}{% if h.quem_registrou %} · por {{ h.quem_registrou }}{% endif %}</span>
+            <span class="bolha">{{ icone(icone_motivo[h.motivo]) }}</span>
+            <span class="item-texto">
+                <span class="item-titulo">{{ h.apelido }} <span class="erro-texto">+{{ h.pontos }}</span></span>
+                <span class="item-sub">{{ motivos[h.motivo] }} · {{ h.data[8:10] }}/{{ h.data[5:7] }}{% if h.descricao %} · {{ h.descricao }}{% endif %}{% if h.quem_registrou %} · por {{ h.quem_registrou }}{% endif %}</span>
             </span>
             {% if g.morador.admin or h.registrado_por == g.morador.id %}
             <form action="{{ url_for('azaralho.apagar', ponto_id=h.id) }}" method="POST"
                   onsubmit="return confirm({{ ('Tirar o ponto de ' ~ h.apelido ~ '?')|tojson }});">
-                <button type="submit" class="btn-vermelho" title="Tirar ponto">🗑️</button>
+                <button type="submit" class="btn-vermelho btn-icone" title="Tirar ponto" aria-label="Tirar ponto">{{ icone('lixo') }}</button>
             </form>
             {% endif %}
         </li>
     {% else %}
-        <p class="estoque-vazio">Ninguém tomou ponto nesse mês. Milagre! 🙏</p>
+        <p class="vazio">Nenhum ponto registrado.</p>
     {% endfor %}
     </ul>
 </div>
-
-{{ voltar() }}
 {% endblock %}
