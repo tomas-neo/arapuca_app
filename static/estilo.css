@@ -206,3 +206,21 @@ hr { border: none; border-top: 1px solid var(--card-border); margin: 20px 0; }
 .peso-form input { width: 64px; padding: 8px; text-align: center; }
 .item-row { gap: 8px; }
 .item-row > span:first-child { flex: 1; }
+
+.dia { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--card-border); }
+.dia:last-of-type { border-bottom: none; }
+.dia-nome { width: 72px; flex-shrink: 0; color: var(--text-muted); font-size: 14px; padding-top: 4px; }
+.dia-hoje .dia-nome { color: var(--accent); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: #1e1e24; border: 1px solid var(--card-border); border-radius: 999px; padding: 4px 10px; font-size: 14px; }
+.chip em { color: var(--text-muted); font-style: normal; }
+.chip-meu { border-color: var(--accent); }
+.chip form { margin: 0; display: inline; }
+.chip-x { width: auto; padding: 0 2px; margin: 0; background: none; color: var(--text-muted); font-size: 16px; line-height: 1; }
+.minha { border-left-color: var(--success); }
+.form-escala { display: flex; flex-wrap: wrap; gap: 8px; }
+.form-escala select { flex: 1; min-width: 110px; }
+.form-escala button { flex-basis: 100%; }
+.ajustes { margin-top: 14px; color: var(--text-muted); }
+.ajustes summary { cursor: pointer; margin-bottom: 10px; }
+.hoje-lista li { margin-bottom: 8px; }
