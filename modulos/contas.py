@@ -1,3 +1,4 @@
+from decimal import Decimal, ROUND_HALF_UP
 import re
 from datetime import date
 
@@ -10,26 +11,79 @@ contas_bp = Blueprint('contas', __name__, url_prefix='/contas')
 
 MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
          "agosto", "setembro", "outubro", "novembro", "dezembro"]
+TIPOS_AJUSTE = {"outros": "Outros", "pendencia": "Pendência", "desconto": "Desconto"}
 
 
 # ---------- regras de dinheiro (sem Flask, fáceis de testar) ----------
 
-def dividir(total_centavos, pesos):
-    """Divide o total proporcional aos pesos, em centavos, sem perder nenhum centavo.
+def arredondar(centavos):
+    """Arredonda centavos fracionados como a planilha (meio centavo sobe)."""
+    return int(Decimal(str(round(centavos, 6))).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
-    pesos: {morador_id: peso}. Os centavos que sobram do arredondamento vão
-    para quem teve a maior fração cortada (método do maior resto).
+
+def calcular_mes(aluguel, despesas, quartos, caixinha, fracao_comum=0.5, ajustes=None):
+    """Divide o mês igual à planilha Financeiro Arapuca.
+
+    - aluguel × fracao_comum: área comum, igual para todas as vagas
+    - aluguel × (1 − fracao_comum): quartos, pela ponderação, dividido pelas vagas do quarto
+    - despesas: igual para todas as vagas
+    - caixinha: valor fixo por vaga
+    - ajustes: {morador_id: centavos} (outros + pendências − desconto)
+
+    quartos: [{'nome', 'ponderacao', 'vagas', 'moradores': [{'id', 'apelido'}]}]
+    Devolve (linhas, avisos). Cada linha é uma vaga; vaga sem morador tem morador_id None.
     """
-    soma = sum(pesos.values())
-    if total_centavos <= 0 or soma <= 0:
-        return {m: 0 for m in pesos}
+    ajustes = ajustes or {}
+    avisos = []
+    vagas = []
+    for q in quartos:
+        n = max(q['vagas'], len(q['moradores']))
+        if len(q['moradores']) > q['vagas']:
+            avisos.append(f"{q['nome']} tem {len(q['moradores'])} moradores para {q['vagas']} vagas")
+        for i in range(n):
+            vagas.append((q, q['moradores'][i] if i < len(q['moradores']) else None, n))
+    if not vagas:
+        return [], ["Cadastre os quartos para dividir as contas"]
 
-    exatos = {m: total_centavos * p / soma for m, p in pesos.items()}
-    partes = {m: int(v) for m, v in exatos.items()}
-    sobra = total_centavos - sum(partes.values())
-    for m in sorted(exatos, key=lambda m: exatos[m] - partes[m], reverse=True)[:sobra]:
-        partes[m] += 1
-    return partes
+    total_vagas = len(vagas)
+    soma_pond = sum(q['ponderacao'] for q in quartos)
+    if abs(soma_pond - 1) > 0.0005:
+        avisos.append(f"As ponderações dos quartos somam {soma_pond:.3f} em vez de 1. O app ajusta na proporção.")
+
+    comum = aluguel * fracao_comum / total_vagas
+    por_vaga_desp = despesas / total_vagas
+    casa_exata, total_exato = [], []
+    for q, _, n in vagas:
+        if soma_pond > 0:
+            parte_quarto = aluguel * (1 - fracao_comum) * (q['ponderacao'] / soma_pond) / n
+        else:
+            parte_quarto = aluguel * (1 - fracao_comum) / total_vagas
+        casa_exata.append(comum + parte_quarto)
+        total_exato.append(comum + parte_quarto + por_vaga_desp)
+
+    # cada vaga arredondada sozinha, igual à planilha (a soma pode variar 1 ou 2 centavos)
+    casa = [arredondar(v) for v in casa_exata]
+    casa_mais_desp = [arredondar(v) for v in total_exato]
+
+    linhas = []
+    for i, (q, morador, _) in enumerate(vagas):
+        ajuste = ajustes.get(morador['id'], 0) if morador else 0
+        linhas.append({
+            'vaga': i + 1,
+            'quarto': q['nome'],
+            'morador_id': morador['id'] if morador else None,
+            'apelido': morador['apelido'] if morador else None,
+            'casa_centavos': casa[i],
+            'despesas_centavos': casa_mais_desp[i] - casa[i],
+            'caixinha_centavos': caixinha,
+            'ajustes_centavos': ajuste,
+            'total_centavos': casa_mais_desp[i] + caixinha + ajuste,
+            'pago_centavos': 0,
+        })
+    sem_quarto = [m for m in ajustes if not any(l['morador_id'] == m for l in linhas)]
+    if sem_quarto:
+        avisos.append("Há ajustes de moradores sem quarto; eles não entram na divisão")
+    return linhas, avisos
 
 
 def ler_valor(texto):
@@ -79,52 +133,99 @@ def mes_da_url():
     return mes
 
 
+def ler_config(conn):
+    cfg = {r['chave']: r['valor'] for r in conn.execute('SELECT chave, valor FROM config')}
+    return int(cfg.get('caixinha_centavos', 5000)), float(cfg.get('fracao_area_comum', 0.5))
+
+
+def carregar_quartos(conn):
+    quartos = [dict(q) for q in conn.execute('SELECT id, nome, ponderacao, vagas FROM quartos ORDER BY id')]
+    for q in quartos:
+        q['moradores'] = [dict(m) for m in conn.execute(
+            'SELECT id, apelido FROM moradores WHERE ativo = 1 AND quarto_id = ? ORDER BY apelido', (q['id'],))]
+    return quartos
+
+
+def ajustes_do_mes(conn, mes):
+    lista = conn.execute(
+        '''SELECT a.id, a.morador_id, m.apelido, a.tipo, a.descricao, a.valor_centavos
+           FROM ajustes a JOIN moradores m ON m.id = a.morador_id
+           WHERE a.mes = ? ORDER BY m.apelido, a.id''', (mes,)).fetchall()
+    soma = {}
+    for a in lista:
+        sinal = -1 if a['tipo'] == 'desconto' else 1
+        soma[a['morador_id']] = soma.get(a['morador_id'], 0) + sinal * a['valor_centavos']
+    return lista, soma
+
+
+def mes_esta_fechado(conn, mes):
+    return conn.execute('SELECT 1 FROM fechamentos WHERE mes = ? LIMIT 1', (mes,)).fetchone() is not None
+
+
+def divisao_do_mes(conn, mes):
+    """Divisão congelada se o mês foi fechado; senão, prévia com os dados de hoje."""
+    fechado = conn.execute(
+        '''SELECT f.*, m.apelido FROM fechamentos f LEFT JOIN moradores m ON m.id = f.morador_id
+           WHERE f.mes = ? ORDER BY f.vaga''', (mes,)).fetchall()
+    if fechado:
+        return [dict(l) for l in fechado], [], True
+
+    contas = conn.execute('SELECT tipo, valor_centavos FROM contas WHERE mes = ?', (mes,)).fetchall()
+    aluguel = sum(c['valor_centavos'] for c in contas if c['tipo'] == 'aluguel')
+    despesas = sum(c['valor_centavos'] for c in contas if c['tipo'] != 'aluguel')
+    caixinha, fracao = ler_config(conn)
+    _, ajustes = ajustes_do_mes(conn, mes)
+    linhas, avisos = calcular_mes(aluguel, despesas, carregar_quartos(conn), caixinha, fracao, ajustes)
+    sem_quarto = conn.execute('SELECT apelido FROM moradores WHERE ativo = 1 AND quarto_id IS NULL').fetchall()
+    if sem_quarto:
+        avisos.append("Sem quarto (fora da divisão): " + ", ".join(m['apelido'] for m in sem_quarto))
+    return linhas, avisos, False
+
+
+def saldo_acumulado(conn, morador_id):
+    return conn.execute(
+        'SELECT COALESCE(SUM(pago_centavos - total_centavos), 0) FROM fechamentos WHERE morador_id = ?',
+        (morador_id,)).fetchone()[0]
+
+
 @contas_bp.route("/")
 def index():
     mes = mes_da_url()
     conn = conectar_db()
     contas = conn.execute(
-        'SELECT id, descricao, valor_centavos FROM contas WHERE mes = ? ORDER BY id', (mes,)
+        'SELECT id, descricao, tipo, valor_centavos FROM contas WHERE mes = ? ORDER BY tipo, id', (mes,)
     ).fetchall()
-    total = sum(c['valor_centavos'] for c in contas)
-
-    fechado = conn.execute(
-        '''SELECT r.morador_id, m.apelido, r.peso, r.valor_centavos, r.pago
-           FROM rateio r JOIN moradores m ON m.id = r.morador_id
-           WHERE r.mes = ? ORDER BY m.apelido''', (mes,)
-    ).fetchall()
-
-    if fechado:
-        divisao = [dict(r) for r in fechado]
-    else:
-        # Prévia: divide entre quem está ativo hoje, com o peso atual
-        ativos = conn.execute(
-            'SELECT id, apelido, peso FROM moradores WHERE ativo = 1 ORDER BY apelido'
-        ).fetchall()
-        partes = dividir(total, {m['id']: m['peso'] for m in ativos})
-        divisao = [{'morador_id': m['id'], 'apelido': m['apelido'], 'peso': m['peso'],
-                    'valor_centavos': partes[m['id']], 'pago': 0} for m in ativos]
+    linhas, avisos, fechado = divisao_do_mes(conn, mes)
+    lista_ajustes, _ = ajustes_do_mes(conn, mes)
+    moradores = conn.execute('SELECT id, apelido FROM moradores WHERE ativo = 1 ORDER BY apelido').fetchall()
+    meu_saldo = saldo_acumulado(conn, g.morador['id'])
     conn.close()
 
-    minha_parte = next((d for d in divisao if d['morador_id'] == g.morador['id']), None)
-
+    minha_parte = next((l for l in linhas if l['morador_id'] == g.morador['id']), None)
     return render_template(
         "contas.html",
-        mes=mes,
-        nome_mes=nome_mes(mes),
-        anterior=deslocar_mes(mes, -1),
-        proximo=deslocar_mes(mes, 1),
+        mes=mes, nome_mes=nome_mes(mes),
+        anterior=deslocar_mes(mes, -1), proximo=deslocar_mes(mes, 1),
         contas=contas,
-        total=total,
-        divisao=divisao,
-        fechado=bool(fechado),
-        minha_parte=minha_parte,
+        total_aluguel=sum(c['valor_centavos'] for c in contas if c['tipo'] == 'aluguel'),
+        total_despesas=sum(c['valor_centavos'] for c in contas if c['tipo'] != 'aluguel'),
+        linhas=linhas, avisos=avisos, fechado=fechado,
+        minha_parte=minha_parte, meu_saldo=meu_saldo,
+        ajustes=lista_ajustes, tipos_ajuste=TIPOS_AJUSTE, moradores=moradores,
         erro=request.args.get("erro", ""),
     )
 
 
-def mes_esta_fechado(conn, mes):
-    return conn.execute('SELECT 1 FROM rateio WHERE mes = ? LIMIT 1', (mes,)).fetchone() is not None
+def voltar(mes, erro=None, ancora=""):
+    url = url_for("contas.index", mes=mes, erro=erro) if erro else url_for("contas.index", mes=mes)
+    return redirect(url + ancora)
+
+
+def bloquear_se_fechado(conn, mes):
+    if mes_esta_fechado(conn, mes):
+        conn.close()
+        return voltar(mes, "Esse mês já foi fechado. Reabra para mudar.")
+    return None
 
 
 @contas_bp.route("/nova", methods=["POST"])
@@ -133,21 +234,22 @@ def nova():
     mes = mes_da_url()
     descricao = request.form.get("descricao", "").strip()
     valor = ler_valor(request.form.get("valor", ""))
-
+    tipo = request.form.get("tipo", "despesa")
+    if tipo not in ("aluguel", "despesa"):
+        abort(400)
     if not descricao or len(descricao) > 60:
-        return redirect(url_for("contas.index", mes=mes, erro="Coloque uma descrição (até 60 letras)"))
+        return voltar(mes, "Coloque uma descrição (até 60 letras)")
     if not valor:
-        return redirect(url_for("contas.index", mes=mes, erro="Valor inválido. Use por exemplo 1.234,56"))
+        return voltar(mes, "Valor inválido. Use por exemplo 1.234,56")
 
     conn = conectar_db()
-    if mes_esta_fechado(conn, mes):
-        conn.close()
-        return redirect(url_for("contas.index", mes=mes, erro="Esse mês já foi fechado. Reabra para mudar."))
-    conn.execute('INSERT INTO contas (mes, descricao, valor_centavos, criado_por) VALUES (?, ?, ?, ?)',
-                 (mes, descricao, valor, g.morador['id']))
+    if (bloqueio := bloquear_se_fechado(conn, mes)):
+        return bloqueio
+    conn.execute('INSERT INTO contas (mes, descricao, tipo, valor_centavos, criado_por) VALUES (?, ?, ?, ?, ?)',
+                 (mes, descricao, tipo, valor, g.morador['id']))
     conn.commit()
     conn.close()
-    return redirect(url_for("contas.index", mes=mes))
+    return voltar(mes)
 
 
 @contas_bp.route("/<int:conta_id>/apagar", methods=["POST"])
@@ -155,34 +257,73 @@ def nova():
 def apagar(conta_id):
     mes = mes_da_url()
     conn = conectar_db()
-    if mes_esta_fechado(conn, mes):
-        conn.close()
-        return redirect(url_for("contas.index", mes=mes, erro="Esse mês já foi fechado. Reabra para mudar."))
+    if (bloqueio := bloquear_se_fechado(conn, mes)):
+        return bloqueio
     conn.execute('DELETE FROM contas WHERE id = ? AND mes = ?', (conta_id, mes))
     conn.commit()
     conn.close()
-    return redirect(url_for("contas.index", mes=mes))
+    return voltar(mes)
+
+
+@contas_bp.route("/ajuste", methods=["POST"])
+@somente_admin
+def novo_ajuste():
+    mes = mes_da_url()
+    tipo = request.form.get("tipo", "")
+    descricao = request.form.get("descricao", "").strip() or TIPOS_AJUSTE.get(tipo, "")
+    valor = ler_valor(request.form.get("valor", ""))
+    try:
+        morador_id = int(request.form.get("morador_id", ""))
+    except ValueError:
+        abort(400)
+    if tipo not in TIPOS_AJUSTE:
+        abort(400)
+    if not valor:
+        return voltar(mes, "Valor do ajuste inválido", "#ajustes")
+
+    conn = conectar_db()
+    if (bloqueio := bloquear_se_fechado(conn, mes)):
+        return bloqueio
+    conn.execute('INSERT INTO ajustes (mes, morador_id, tipo, descricao, valor_centavos) VALUES (?, ?, ?, ?, ?)',
+                 (mes, morador_id, tipo, descricao[:60], valor))
+    conn.commit()
+    conn.close()
+    return voltar(mes, ancora="#ajustes")
+
+
+@contas_bp.route("/ajuste/<int:ajuste_id>/apagar", methods=["POST"])
+@somente_admin
+def apagar_ajuste(ajuste_id):
+    mes = mes_da_url()
+    conn = conectar_db()
+    if (bloqueio := bloquear_se_fechado(conn, mes)):
+        return bloqueio
+    conn.execute('DELETE FROM ajustes WHERE id = ? AND mes = ?', (ajuste_id, mes))
+    conn.commit()
+    conn.close()
+    return voltar(mes, ancora="#ajustes")
 
 
 @contas_bp.route("/fechar", methods=["POST"])
 @somente_admin
 def fechar():
-    """Congela a divisão do mês com os moradores ativos e pesos de agora."""
+    """Congela a divisão do mês com os quartos, moradores e valores de agora."""
     mes = mes_da_url()
     conn = conectar_db()
-    if not mes_esta_fechado(conn, mes):
-        total = conn.execute('SELECT COALESCE(SUM(valor_centavos), 0) FROM contas WHERE mes = ?', (mes,)).fetchone()[0]
-        ativos = conn.execute('SELECT id, peso FROM moradores WHERE ativo = 1').fetchall()
-        if total == 0 or not ativos:
+    linhas, _, fechado = divisao_do_mes(conn, mes)
+    if not fechado:
+        if not linhas or not any(l['casa_centavos'] or l['despesas_centavos'] for l in linhas):
             conn.close()
-            return redirect(url_for("contas.index", mes=mes, erro="Lance as contas antes de fechar o mês"))
-        pesos = {m['id']: m['peso'] for m in ativos}
-        partes = dividir(total, pesos)
-        conn.executemany('INSERT INTO rateio (mes, morador_id, peso, valor_centavos) VALUES (?, ?, ?, ?)',
-                         [(mes, m, pesos[m], partes[m]) for m in pesos])
+            return voltar(mes, "Lance as contas e cadastre os quartos antes de fechar o mês")
+        conn.executemany(
+            '''INSERT INTO fechamentos (mes, vaga, quarto, morador_id, casa_centavos, despesas_centavos,
+                                         caixinha_centavos, ajustes_centavos, total_centavos)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            [(mes, l['vaga'], l['quarto'], l['morador_id'], l['casa_centavos'], l['despesas_centavos'],
+              l['caixinha_centavos'], l['ajustes_centavos'], l['total_centavos']) for l in linhas])
         conn.commit()
     conn.close()
-    return redirect(url_for("contas.index", mes=mes))
+    return voltar(mes)
 
 
 @contas_bp.route("/reabrir", methods=["POST"])
@@ -190,18 +331,33 @@ def fechar():
 def reabrir():
     mes = mes_da_url()
     conn = conectar_db()
-    conn.execute('DELETE FROM rateio WHERE mes = ?', (mes,))
+    conn.execute('DELETE FROM fechamentos WHERE mes = ?', (mes,))
     conn.commit()
     conn.close()
-    return redirect(url_for("contas.index", mes=mes))
+    return voltar(mes)
 
 
-@contas_bp.route("/pago/<int:morador_id>", methods=["POST"])
+@contas_bp.route("/pagamento/<int:vaga>", methods=["POST"])
 @somente_admin
-def marcar_pago(morador_id):
+def registrar_pagamento(vaga):
+    """Guarda quanto o morador daquela vaga pagou no mês (vazio ou 'tudo' = valor cheio)."""
     mes = mes_da_url()
     conn = conectar_db()
-    conn.execute('UPDATE rateio SET pago = 1 - pago WHERE mes = ? AND morador_id = ?', (mes, morador_id))
+    linha = conn.execute('SELECT total_centavos FROM fechamentos WHERE mes = ? AND vaga = ?', (mes, vaga)).fetchone()
+    if linha is None:
+        conn.close()
+        abort(404)
+    texto = request.form.get("valor", "").strip()
+    if texto.lower() in ("", "tudo"):
+        pago = linha['total_centavos']
+    elif texto == "0":
+        pago = 0
+    else:
+        pago = ler_valor(texto)
+        if pago is None:
+            conn.close()
+            return voltar(mes, "Valor pago inválido", "#divisao")
+    conn.execute('UPDATE fechamentos SET pago_centavos = ? WHERE mes = ? AND vaga = ?', (pago, mes, vaga))
     conn.commit()
     conn.close()
-    return redirect(url_for("contas.index", mes=mes))
+    return voltar(mes, ancora="#divisao")

@@ -38,12 +38,39 @@ def inicializar_db():
         )
     ''')
 
-    # Peso de cada morador na divisão (1 = parte normal; quarto maior pode ser 1.5 etc.)
-    colunas = [c['name'] for c in conn.execute('PRAGMA table_info(moradores)')]
-    if 'peso' not in colunas:
-        conn.execute('ALTER TABLE moradores ADD COLUMN peso REAL NOT NULL DEFAULT 1')
+    # Quartos da casa, igual à planilha Financeiro: ponderação = fatia do aluguel
+    # dos quartos; vagas = quantas pessoas o quarto comporta (vaga vazia também entra na conta)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS quartos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            ponderacao REAL NOT NULL CHECK (ponderacao >= 0),
+            vagas INTEGER NOT NULL CHECK (vagas >= 1)
+        )
+    ''')
+    if conn.execute('SELECT COUNT(*) FROM quartos').fetchone()[0] == 0:
+        # Quartos da planilha Financeiro Arapuca 2K26 (outubro/2026)
+        conn.executemany('INSERT INTO quartos (nome, ponderacao, vagas) VALUES (?, ?, ?)', [
+            ("Zoológico", 0.18, 4), ("Nós Fumamos", 0.153, 3), ("Suíte", 0.2, 3), ("Motel", 0.112, 2),
+            ("Produção", 0.115, 1), ("Mega house", 0.08, 1), ("Laboratório", 0.089, 1), ("Açougue", 0.071, 1),
+        ])
 
-    # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento)
+    colunas = [c['name'] for c in conn.execute('PRAGMA table_info(moradores)')]
+    if 'quarto_id' not in colunas:
+        conn.execute('ALTER TABLE moradores ADD COLUMN quarto_id INTEGER REFERENCES quartos(id) ON DELETE SET NULL')
+
+    # Configurações da divisão (caixinha por morador, fatia do aluguel que é área comum)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS config (
+            chave TEXT PRIMARY KEY,
+            valor TEXT NOT NULL
+        )
+    ''')
+    conn.executemany('INSERT OR IGNORE INTO config (chave, valor) VALUES (?, ?)',
+                     [("caixinha_centavos", "5000"), ("fracao_area_comum", "0.5")])
+
+    # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento).
+    # tipo: 'aluguel' (vai metade área comum, metade quartos) ou 'despesa' (igual por vaga)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS contas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,16 +81,37 @@ def inicializar_db():
             criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    colunas = [c['name'] for c in conn.execute('PRAGMA table_info(contas)')]
+    if 'tipo' not in colunas:
+        conn.execute("ALTER TABLE contas ADD COLUMN tipo TEXT NOT NULL DEFAULT 'despesa'")
+        conn.execute("UPDATE contas SET tipo = 'aluguel' WHERE descricao LIKE 'aluguel%'")
 
-    # Divisão congelada quando o mês é fechado: quem estava na casa, com qual peso e quanto deve
+    # Ajustes de um morador no mês: outros, pendências (somam) e desconto (subtrai)
     conn.execute('''
-        CREATE TABLE IF NOT EXISTS rateio (
+        CREATE TABLE IF NOT EXISTS ajustes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             mes TEXT NOT NULL,
             morador_id INTEGER NOT NULL REFERENCES moradores(id),
-            peso REAL NOT NULL,
-            valor_centavos INTEGER NOT NULL,
-            pago INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (mes, morador_id)
+            tipo TEXT NOT NULL CHECK (tipo IN ('outros', 'pendencia', 'desconto')),
+            descricao TEXT NOT NULL,
+            valor_centavos INTEGER NOT NULL CHECK (valor_centavos > 0)
+        )
+    ''')
+
+    # Divisão congelada quando o mês é fechado. Uma linha por vaga: morador_id NULL = vaga livre.
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS fechamentos (
+            mes TEXT NOT NULL,
+            vaga INTEGER NOT NULL,
+            quarto TEXT NOT NULL,
+            morador_id INTEGER REFERENCES moradores(id),
+            casa_centavos INTEGER NOT NULL,
+            despesas_centavos INTEGER NOT NULL,
+            caixinha_centavos INTEGER NOT NULL,
+            ajustes_centavos INTEGER NOT NULL,
+            total_centavos INTEGER NOT NULL,
+            pago_centavos INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (mes, vaga)
         )
     ''')
 
