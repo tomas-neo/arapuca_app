@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import erro as mostrar_erro, voltar %}
+{% block titulo %}Trocar senha{% endblock %}
+{% block conteudo %}
+<h2>🔑 Trocar senha</h2>
+<div class="card">
+    {{ mostrar_erro(erro) }}
+    {% if sucesso %}<div class="alerta alerta-ok"><h3>✅ Senha trocada</h3></div>{% endif %}
+    <form action="{{ url_for('auth.trocar_senha') }}" method="POST">
+        <input type="password" name="atual" class="campo" placeholder="Senha atual" autocomplete="current-password" required>
+        <input type="password" name="nova" class="campo" placeholder="Nova senha (mín. 6)" autocomplete="new-password" minlength="6" required>
+        <button type="submit" class="btn-laranja">Salvar</button>
+    </form>
+</div>
+{{ voltar() }}
+{% endblock %}

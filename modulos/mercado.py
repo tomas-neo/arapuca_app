@@ -1,7 +1,5 @@
-from flask import Blueprint, request, redirect, url_for
+from flask import Blueprint, redirect, render_template, request, url_for
 from database import conectar_db
-from estilo import renderizar_pagina
-from markupsafe import escape
 
 mercado_bp = Blueprint('mercado', __name__, url_prefix='/mercado')
 
@@ -26,55 +24,7 @@ def index():
     itens = conn.execute('SELECT * FROM mercado WHERE quantidade > 0').fetchall()
     conn.close()
     
-    # 1. Monta o HTML da lista de Estoque Atual
-    html_itens = ""
-    for row in itens:
-        html_itens += f"""
-        <li class="item-row">
-            <span><strong>{escape(row['item'])}</strong> (Qtd: {row['quantidade']})</span>
-            <form action="/mercado/diminuir/{row['id']}" method="POST">
-                <button type="submit" class="btn-vermelho">📉 Usar 1</button>
-            </form>
-        </li>
-        """
-
-    if not html_itens:
-        html_itens = "<p class='estoque-vazio'>O estoque está vazio! Faça as compras.</p>"
-
-    # 2. Monta as opções do Menu Dropdown
-    opcoes_dropdown = ""
-    for item, unidade in sorted(ITENS_PLANILHA.items()):
-        opcoes_dropdown += f'<option value="{item} ({unidade})">{item} - {unidade}</option>'
-
-    # 3. Junta tudo em um Painel de Controle unificado e elegante
-    conteudo = f"""
-    <h2>🛒 Controle do Mercado</h2>
-
-    <div class="card">
-        <h3>➕ Dar Entrada</h3>
-        <form action="/mercado/adicionar" method="POST" class="form-row">
-            <select name="item" required style="flex: 2; min-width: 220px;">
-                <option value="" disabled selected>Selecione um item da planilha...</option>
-                {opcoes_dropdown}
-            </select>
-
-            <input type="number" name="quantidade" placeholder="Qtd" value="1" min="1" required style="flex: 0.5; min-width: 90px; text-align: center; font-weight: bold;">
-
-            <button type="submit" class="btn-laranja" style="flex: 1; min-width: 140px;">Adicionar</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <h3>📦 Estoque da República</h3>
-        <ul style="padding: 0; margin: 0;">
-            {html_itens}
-        </ul>
-    </div>
-
-    <a href='/' class="botao-menu">🏠 Voltar para o Menu Principal</a>
-    """
-    
-    return renderizar_pagina("Mercado - Arapuca", conteudo)
+    return render_template("mercado.html", itens=itens, itens_planilha=sorted(ITENS_PLANILHA.items()))
 
 @mercado_bp.route("/adicionar", methods=["POST"])
 def adicionar():

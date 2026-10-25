@@ -1,0 +1,2 @@
+{% macro erro(texto) %}{% if texto %}<div class="alerta alerta-critico"><h3>{{ texto }}</h3></div>{% endif %}{% endmacro %}
+{% macro voltar() %}<a href="{{ url_for('home') }}" class="botao-menu">🏠 Voltar para o início</a>{% endmacro %}

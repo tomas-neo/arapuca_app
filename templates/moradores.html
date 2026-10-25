@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_macros.html" import erro as mostrar_erro, voltar %}
+{% block titulo %}Moradores{% endblock %}
+{% block conteudo %}
+<h2>👥 Moradores</h2>
+<div class="card">
+    <h3>➕ Novo morador</h3>
+    {{ mostrar_erro(erro) }}
+    <form action="{{ url_for('moradores.novo') }}" method="POST">
+        <input type="text" name="apelido" class="campo" placeholder="Apelido" required maxlength="40">
+        <input type="text" name="senha" class="campo" placeholder="Senha inicial (mín. 6)" minlength="6" required>
+        <label class="checkbox"><input type="checkbox" name="admin" value="1"> Admin</label>
+        <button type="submit" class="btn-laranja">Criar</button>
+    </form>
+    <p class="dica">Passe a senha inicial para o morador e peça para ele trocar em "Trocar senha".</p>
+</div>
+<div class="card">
+    <h3>🏠 Na casa</h3>
+    <ul class="lista">
+    {% for m in moradores %}
+        <li class="item-row">
+            <span><strong>{{ m.apelido }}</strong>{% if m.admin %} 👑{% endif %}{% if not m.ativo %} <em class="apagado">(saiu)</em>{% endif %}</span>
+            {% if m.id == g.morador.id %}
+            <span class="apagado dica">você</span>
+            {% else %}
+            <form action="{{ url_for('moradores.alternar_ativo', morador_id=m.id) }}" method="POST">
+                {% if m.ativo %}
+                <button type="submit" class="btn-vermelho">Desativar</button>
+                {% else %}
+                <button type="submit" class="btn-verde">Reativar</button>
+                {% endif %}
+            </form>
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+{{ voltar() }}
+{% endblock %}

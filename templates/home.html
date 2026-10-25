@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<h1>🏠 ARAPUCA App</h1>
+<p>Fala, <strong>{{ g.morador.apelido }}</strong>! Central de Controle da República</p>
+<br>
+<a href="{{ url_for('mercado.index') }}" class="botao-menu">🛒 Mercado (Dispensa)</a>
+<a href="{{ url_for('boiler.index') }}" class="botao-menu">🛁 Controle do Boiler</a>
+{% if g.morador.admin %}
+<a href="{{ url_for('moradores.index') }}" class="botao-menu">👥 Moradores</a>
+{% endif %}
+<a href="{{ url_for('auth.trocar_senha') }}" class="botao-menu">🔑 Trocar senha</a>
+<form action="{{ url_for('auth.logout') }}" method="POST">
+    <button type="submit" class="btn-vermelho">Sair</button>
+</form>
+{% endblock %}

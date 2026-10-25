@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import voltar %}
+{% block titulo %}Boiler - Arapuca{% endblock %}
+{# Atualiza a tela sozinha a cada 30 s #}
+{% block head %}<meta http-equiv="refresh" content="30">{% endblock %}
+{% block conteudo %}
+<h2>🛁 Controle do Boiler</h2>
+<div class="card">
+    {% if status == "LIGADO" %}
+        {% if minutos >= 20 %}
+        <div class="alerta alerta-critico"><h2>🚨 DESLIGA ISSO! ({{ minutos }} min) 🚨</h2></div>
+        {% else %}
+        <div class="alerta alerta-ok"><h3>⏱️ Tempo ligado: {{ minutos }} minuto(s)</h3></div>
+        {% endif %}
+        <p class="centro">⚠️ Ligado por: <strong>{{ responsavel }}</strong></p>
+        <form action="{{ url_for('boiler.desligar') }}" method="POST">
+            <button type="submit" class="btn-vermelho">🔴 DESLIGAR BOILER</button>
+        </form>
+    {% else %}
+        <div class="alerta alerta-ok"><h3>✅ DESLIGADO</h3><p>Último a usar: {{ responsavel }}</p></div>
+        <form action="{{ url_for('boiler.ligar') }}" method="POST">
+            <button type="submit" class="btn-verde">🟢 LIGAR BOILER</button>
+        </form>
+    {% endif %}
+</div>
+{{ voltar() }}
+{% endblock %}
