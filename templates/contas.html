@@ -10,7 +10,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
 {% else %}<span class="etiqueta etiqueta-perigo">Em aberto</span>{% endif %}
 {%- endmacro %}
 {% block titulo %}Contas{% endblock %}
-{% block subtitulo %}{% if minha_parte %}Sua parte · {{ minha_parte.quarto }}{% else %}Contas da casa{% endif %}{% endblock %}
+{% block subtitulo %}{% if minha_parte %}Sua parte do mês{% else %}Contas da casa{% endif %}{% endblock %}
 {% block titulo_topo %}{% if minha_parte %}{{ minha_parte.total_centavos|reais }}{% else %}Contas e aluguel{% endif %}{% endblock %}
 {% block topo_extra %}{{ mes_nav('contas.index', nome_mes, anterior, proximo) }}{% endblock %}
 {% block conteudo %}
@@ -42,12 +42,29 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
 {% endfor %}
 
 <div class="card">
-    <h3>{{ icone('recibo') }} Contas do mês</h3>
+    <h3>{{ icone('recibo') }} Aluguel da rep e gastos</h3>
+    {% set alugueis = contas|selectattr('tipo', 'equalto', 'aluguel')|list %}
+    {% set gastos = contas|rejectattr('tipo', 'equalto', 'aluguel')|list %}
+    <div class="aluguel-rep">
+        <span><span class="rotulo">Aluguel da rep</span><strong>{{ total_aluguel|reais }}</strong></span>
+        <span class="bolha">{{ icone('casa') }}</span>
+    </div>
+    {% if g.morador.admin and not fechado and alugueis %}
     <ul class="lista">
-    {% for c in contas %}
+        {% for c in alugueis %}
+        <li class="item-row"><span class="item-texto"><span class="item-sub">{{ c.descricao }}</span></span>
+            <span class="item-sub">{{ c.valor_centavos|reais }}</span>
+            <form action="{{ url_for('contas.apagar', conta_id=c.id, mes=mes) }}" method="POST">
+                <button type="submit" class="btn-vermelho btn-icone" title="Apagar" aria-label="Apagar {{ c.descricao }}">{{ icone('lixo') }}</button>
+            </form></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="rotulo" style="margin: 16px 0 4px;">Gastos</p>
+    <ul class="lista gastos">
+    {% for c in gastos %}
         <li class="item-row">
-            <span class="bolha">{{ icone('casa' if c.tipo == 'aluguel' else 'recibo') }}</span>
-            <span class="item-texto"><span class="item-titulo">{{ c.descricao }}</span><span class="item-sub">{{ 'Aluguel' if c.tipo == 'aluguel' else 'Despesa' }}</span></span>
+            <span class="item-texto"><span class="item-titulo">{{ c.descricao }}</span></span>
             <span class="item-valor">{{ c.valor_centavos|reais }}</span>
             {% if g.morador.admin and not fechado %}
             <form action="{{ url_for('contas.apagar', conta_id=c.id, mes=mes) }}" method="POST">
@@ -56,11 +73,11 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
             {% endif %}
         </li>
     {% else %}
-        <p class="vazio">Nenhuma conta lançada nesse mês.</p>
+        <p class="vazio">Nenhum gasto lançado nesse mês.</p>
     {% endfor %}
     </ul>
     {% if contas %}
-    <p class="total">Aluguel <strong>{{ total_aluguel|reais }}</strong> · Despesas <strong>{{ total_despesas|reais }}</strong></p>
+    <p class="total">Gastos <strong>{{ total_despesas|reais }}</strong> · Total <strong>{{ (total_aluguel + total_despesas)|reais }}</strong></p>
     {% endif %}
 
     {% if g.morador.admin and not fechado %}
@@ -68,15 +85,14 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     <form action="{{ url_for('contas.nova', mes=mes) }}" method="POST">
         <div class="form-row">
             <select name="tipo" aria-label="Tipo" style="flex: 0 0 120px;">
-                <option value="despesa">Despesa</option>
+                <option value="despesa">Gasto</option>
                 <option value="aluguel">Aluguel</option>
             </select>
             <input type="text" name="valor" inputmode="decimal" placeholder="R$ 0,00" required style="flex: 1; min-width: 0;">
         </div>
         <input type="text" name="descricao" class="campo" placeholder="Descrição (ex: Luz, Internet)" required maxlength="60">
-        <button type="submit" class="btn-laranja">Lançar conta</button>
+        <button type="submit" class="btn-laranja">Lançar</button>
     </form>
-    <p class="dica" style="margin-top: 10px;">Aluguel: metade dividida igual, metade pela ponderação do quarto. Despesas: iguais para todas as vagas.</p>
     {% endif %}
 </div>
 
@@ -126,11 +142,9 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     {% endif %}
     <ul class="lista">
     {% for l in linhas %}
-        {% if loop.first or l.quarto != loop.previtem.quarto %}<li class="quarto-titulo">{{ l.quarto }}</li>{% endif %}
-        <li class="item-row {% if l.morador_id == g.morador.id %}minha-linha{% endif %}">
+                <li class="item-row {% if l.morador_id == g.morador.id %}minha-linha{% endif %}">
             <span class="item-texto">
                 <span class="item-titulo">{{ l.apelido or 'Vaga livre' }}</span>
-                <span class="item-sub">{{ detalhe(l) }}</span>
             </span>
             <span style="text-align: right;">
                 <span class="item-valor">{{ l.total_centavos|reais }}</span>
@@ -170,7 +184,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     <form action="{{ url_for('contas.fechar', mes=mes) }}" method="POST">
         <button type="submit" class="btn-laranja">{{ icone('cadeado') }} Fechar o mês</button>
     </form>
-    <p class="dica" style="margin-top: 10px;">Fechar congela os quartos e valores de agora. Depois dá pra marcar quem pagou (vazio = pagou tudo).</p>
+    <p class="dica" style="margin-top: 10px;">Fechar congela os valores do mês. Depois dá pra marcar quem pagou (vazio = pagou tudo).</p>
     {% endif %}
     {% endif %}
 </div>

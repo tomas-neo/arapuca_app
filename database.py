@@ -69,6 +69,10 @@ def inicializar_db():
     conn.executemany('INSERT OR IGNORE INTO config (chave, valor) VALUES (?, ?)',
                      [("caixinha_centavos", "5000"), ("fracao_area_comum", "0.5")])
 
+    # Foto de perfil: foto_versao 0 = sem foto; muda a cada troca (evita cache velho no celular)
+    if 'foto_versao' not in [c['name'] for c in conn.execute('PRAGMA table_info(moradores)')]:
+        conn.execute('ALTER TABLE moradores ADD COLUMN foto_versao INTEGER NOT NULL DEFAULT 0')
+
     # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento).
     # tipo: 'aluguel' (vai metade área comum, metade quartos) ou 'despesa' (igual por vaga)
     conn.execute('''
@@ -141,13 +145,18 @@ def inicializar_db():
             PRIMARY KEY (linha_id, dia, morador_id)
         )
     ''')
+    # prazo_dias: quantos dias depois do dia escalado ainda dá pra fazer (limpeza = 1)
+    if 'prazo_dias' not in [c['name'] for c in conn.execute('PRAGMA table_info(escalas)')]:
+        conn.execute('ALTER TABLE escalas ADD COLUMN prazo_dias INTEGER NOT NULL DEFAULT 0')
+        conn.execute("UPDATE escalas SET prazo_dias = 1 WHERE nome = 'Limpeza'")
     if conn.execute('SELECT COUNT(*) FROM escalas').fetchone()[0] == 0:
         # Mesmas escalas da planilha "Funções - Arapuca"
         padrao = [("Limpeza", "", ["Cozinha", "Garagem"]),
                   ("Passeio do Buddha", "", ["Passeio"]),
                   ("Lavar roupa", "", ["1ª máquina", "2ª máquina"])]
         for nome, icone, linhas in padrao:
-            escala_id = conn.execute('INSERT INTO escalas (nome, icone) VALUES (?, ?)', (nome, icone)).lastrowid
+            escala_id = conn.execute('INSERT INTO escalas (nome, icone, prazo_dias) VALUES (?, ?, ?)',
+                                     (nome, icone, 1 if nome == "Limpeza" else 0)).lastrowid
             conn.executemany('INSERT INTO escala_linhas (escala_id, nome) VALUES (?, ?)',
                              [(escala_id, linha) for linha in linhas])
 
@@ -164,6 +173,36 @@ def inicializar_db():
             criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # Mercado: itens da planilha "Mercado anti reclamação" e tudo que entra e sai do estoque
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS mercado_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            local TEXT NOT NULL DEFAULT 'Mercado',
+            categoria TEXT NOT NULL DEFAULT 'essencial'
+                CHECK (categoria IN ('essencial', 'repor_sempre', 'ganha_brisa', 'quando_precisar')),
+            unidade TEXT NOT NULL DEFAULT 'un',
+            qtd_mensal REAL,
+            estoque REAL NOT NULL DEFAULT 0 CHECK (estoque >= 0),
+            ativo INTEGER NOT NULL DEFAULT 1
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS mercado_movimentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id INTEGER NOT NULL REFERENCES mercado_itens(id) ON DELETE CASCADE,
+            tipo TEXT NOT NULL CHECK (tipo IN ('compra', 'reposicao', 'uso')),
+            quantidade REAL NOT NULL CHECK (quantidade > 0),
+            morador_id INTEGER REFERENCES moradores(id),
+            criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+        )
+    ''')
+    if conn.execute('SELECT COUNT(*) FROM mercado_itens').fetchone()[0] == 0:
+        from modulos.mercado_itens import ITENS_PADRAO
+        conn.executemany(
+            'INSERT INTO mercado_itens (nome, local, categoria, unidade, qtd_mensal) VALUES (?, ?, ?, ?, ?)',
+            ITENS_PADRAO)
 
     cursor_mercado = conn.execute('SELECT COUNT(*) FROM mercado')
     if cursor_mercado.fetchone()[0] == 0:

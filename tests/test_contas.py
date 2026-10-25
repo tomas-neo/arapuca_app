@@ -190,7 +190,7 @@ def test_morador_comum_nao_lanca(app):
     r = mic.post("/contas/nova?mes=2026-10", data={"tipo": "despesa", "descricao": "Luz", "valor": "300"})
     assert r.status_code == 403
     assert mic.post("/contas/fechar?mes=2026-10").status_code == 403
-    assert mic.post("/moradores/quartos/1", data={"nome": "A", "ponderacao": "1", "vagas": "2"}).status_code == 403
+    assert mic.post("/moradores/3/quarto", data={"quarto_id": "1"}).status_code == 403
 
 
 def test_reabrir(app):
@@ -206,14 +206,15 @@ def test_mes_invalido(app):
     assert admin.get("/contas/?mes=2026-13").status_code == 400
 
 
-def test_quartos_e_config(app):
+def test_moradores_sem_pesos(app):
+    """Ponderação e vagas ficam fixas no banco; a tela só mostra quem mora em qual quarto."""
     admin = logar(app, "Oca")
-    assert admin.post("/moradores/quartos/novo", data={"nome": "C", "ponderacao": "0,2", "vagas": "1"}).status_code == 302
-    r = admin.post("/moradores/quartos/novo", data={"nome": "D", "ponderacao": "2", "vagas": "1"})
-    assert "Ponderação" in admin.get(r.headers["Location"]).text
-    admin.post("/moradores/config", data={"caixinha": "60,00", "fracao_comum": "50"})
     pagina = admin.get("/moradores/").text
-    assert "R$ 60,00" in pagina and "1,200" in pagina   # soma das ponderações avisada
+    assert "Ponderação" not in pagina and "Caixinha" not in pagina
+    admin.post("/moradores/3/quarto", data={"quarto_id": "1"})
+    assert 'value="1" selected' in admin.get("/moradores/").text
+    contas = admin.get("/contas/?mes=2026-10").text
+    assert "ponderação" not in contas.lower()
 
 
 def test_migra_banco_antigo(tmp_path, monkeypatch):

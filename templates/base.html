@@ -29,7 +29,7 @@
             {% endif %}
             <span class="topo-marca">Arapuca</span>
             {% if g.morador %}
-            <a href="{{ url_for('auth.trocar_senha') }}" class="avatar" aria-label="Seu perfil">{{ g.morador.apelido[:1]|upper }}</a>
+            <a href="{{ url_for('auth.trocar_senha') }}" class="avatar" aria-label="Seu perfil">{{ avatar(g.morador.id, g.morador.apelido, g.morador.foto_versao) }}</a>
             {% endif %}
         </div>
         <p class="topo-sub">{% block subtitulo %}{% endblock %}</p>
@@ -50,7 +50,7 @@
         ('home', 'Início', 'casa', 'home'),
         ('escalas.index', 'Escalas', 'calendario', 'escalas'),
         ('contas.index', 'Contas', 'carteira', 'contas'),
-        ('azaralho.index', 'Azaralho', 'bandeira', 'azaralho'),
+        ('mercado.index', 'Mercado', 'carrinho', 'mercado'),
         ('auth.trocar_senha', 'Perfil', 'pessoa', 'auth')] %}
     <a href="{{ url_for(alvo) }}" class="{{ 'ativa' if aba == chave }}">{{ icone(nome_icone) }}<span>{{ rotulo }}</span></a>
     {% endfor %}

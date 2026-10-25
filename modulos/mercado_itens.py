@@ -1,0 +1,50 @@
+"""Itens da planilha "Mercado anti reclamação": nome, onde compra, tipo, unidade, quantidade do mês."""
+
+CATEGORIAS = {
+    "essencial": "Essencial",
+    "repor_sempre": "Repor sempre",
+    "ganha_brisa": "Ganha brisa",
+    "quando_precisar": "Quando precisar",
+}
+LOCAIS = ["Hortifrúti", "Mercado", "Loja de tempero"]
+UNIDADES = ["un", "kg", "L", "pct", "rolos"]
+
+ITENS_PADRAO = [
+    ("Alho", "Hortifrúti", "essencial", "kg", 1),
+    ("Cebola", "Hortifrúti", "essencial", "kg", 10),
+    ("Café", "Mercado", "repor_sempre", "kg", 5),
+    ("Farofa", "Mercado", "ganha_brisa", "kg", 0.8),
+    ("Pipoca", "Mercado", "ganha_brisa", "kg", 0.5),
+    ("Margarina", "Mercado", "repor_sempre", "kg", 4),
+    ("Arroz", "Mercado", "essencial", "kg", 25),
+    ("Feijão", "Mercado", "essencial", "kg", 7),
+    ("Macarrão", "Mercado", "ganha_brisa", "kg", 3),
+    ("Açúcar", "Mercado", "essencial", "kg", 5),
+    ("Mistura da Dona", "Mercado", "essencial", "un", None),
+    ("Óleo", "Mercado", "essencial", "L", 7),
+    ("Vinagre", "Mercado", "ganha_brisa", "L", 0.75),
+    ("Sal", "Mercado", "essencial", "kg", 2),
+    ("Amaciante", "Mercado", "essencial", "L", 5),
+    ("Água sanitária", "Mercado", "repor_sempre", "L", 2.5),
+    ("Limpador multiuso", "Mercado", "repor_sempre", "L", 2.5),
+    ("Sabão em pó", "Mercado", "essencial", "kg", 6),
+    ("Desinfetante", "Mercado", "essencial", "L", 5),
+    ("Bombril", "Mercado", "repor_sempre", "pct", 1),
+    ("Esponja", "Mercado", "repor_sempre", "un", 4),
+    ("Detergente", "Mercado", "essencial", "L", 3),
+    ("Papel higiênico", "Mercado", "essencial", "rolos", 30),
+    ("Papel toalha", "Mercado", "repor_sempre", "rolos", 4),
+    ("Saco de lixo 100L", "Mercado", "essencial", "pct", 2),
+    ("Sabão em pedra", "Mercado", "quando_precisar", "un", 1),
+    ("Filtro de papel", "Mercado", "quando_precisar", "un", 2),
+    ("Páprica defumada", "Loja de tempero", "repor_sempre", "pct", None),
+    ("Lemon pepper", "Loja de tempero", "repor_sempre", "pct", None),
+    ("Pimenta do reino", "Loja de tempero", "repor_sempre", "pct", None),
+    ("Cominho", "Loja de tempero", "quando_precisar", "pct", None),
+    ("Chimichurri", "Loja de tempero", "repor_sempre", "pct", None),
+    ("Orégano", "Loja de tempero", "repor_sempre", "pct", None),
+    ("Alho e cebola", "Loja de tempero", "quando_precisar", "pct", None),
+    ("Folha de louro", "Loja de tempero", "repor_sempre", "pct", None),
+    ("Ana Maria", "Loja de tempero", "quando_precisar", "pct", None),
+    ("Tempera tudo", "Loja de tempero", "quando_precisar", "pct", None),
+]
