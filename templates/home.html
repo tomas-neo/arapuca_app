@@ -11,8 +11,10 @@
     {% else %}
     <p class="centro">Nada pra hoje. Folga! 🎉</p>
     {% endif %}
+    {% if meus_pontos %}<p class="centro erro-texto">💀 Você tem {{ meus_pontos }} {{ 'ponto' if meus_pontos == 1 else 'pontos' }} de azaralho este mês</p>{% endif %}
 </div>
 <a href="{{ url_for('escalas.index') }}" class="botao-menu">📅 Escalas</a>
+<a href="{{ url_for('azaralho.index') }}" class="botao-menu">💀 Pontos de azaralho</a>
 <a href="{{ url_for('contas.index') }}" class="botao-menu">💸 Contas e aluguel</a>
 <a href="{{ url_for('mercado.index') }}" class="botao-menu">🛒 Mercado (Dispensa)</a>
 <a href="{{ url_for('boiler.index') }}" class="botao-menu">🛁 Controle do Boiler</a>
