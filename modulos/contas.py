@@ -189,6 +189,11 @@ def saldo_acumulado(conn, morador_id):
         (morador_id,)).fetchone()[0]
 
 
+def pix_aluguel(conn):
+    linha = conn.execute("SELECT valor FROM config WHERE chave = 'pix_aluguel'").fetchone()
+    return linha["valor"] if linha else ""
+
+
 def pagina_planilha(conn):
     """Contas vindas da planilha do financeiro: o app só mostra o que está lá."""
     financeiro.sincronizar_se_preciso()
@@ -201,10 +206,11 @@ def pagina_planilha(conn):
         mes = max([m for m in meses if m <= mes] or meses)  # mês atual ainda sem aba: o último que tem
     info = financeiro.montar_mes(conn, dados, mes, g.morador['id'])
     sync = financeiro.status(conn)
+    pix = pix_aluguel(conn)
     conn.close()
     anterior = max([m for m in meses if m < mes], default=None)
     proximo = min([m for m in meses if m > mes], default=None)
-    return render_template("contas_planilha.html", mes=mes, nome_mes=nome_mes(mes), info=info, sync=sync,
+    return render_template("contas_planilha.html", mes=mes, nome_mes=nome_mes(mes), info=info, sync=sync, pix=pix,
                            anterior=anterior, proximo=proximo, erro=request.args.get("erro", ""),
                            ok=request.args.get("ok", ""))
 
@@ -226,6 +232,7 @@ def index():
     saldo_anterior = conn.execute('SELECT COALESCE(saldo_anterior_centavos, 0) FROM moradores WHERE id = ?',
                                   (g.morador['id'],)).fetchone()[0]
     sync = financeiro.status(conn)
+    pix = pix_aluguel(conn)
     conn.close()
 
     minha_parte = next((l for l in linhas if l['morador_id'] == g.morador['id']), None)
@@ -239,7 +246,7 @@ def index():
         linhas=linhas, avisos=avisos, fechado=fechado,
         minha_parte=minha_parte, meu_saldo=meu_saldo, saldo_anterior=saldo_anterior, fotos=fotos,
         ajustes=lista_ajustes, tipos_ajuste=TIPOS_AJUSTE, moradores=moradores,
-        erro=request.args.get("erro", ""), sync=sync,
+        erro=request.args.get("erro", ""), sync=sync, pix=pix,
     )
 
 
@@ -388,6 +395,18 @@ def registrar_pagamento(vaga):
     conn.commit()
     conn.close()
     return voltar(mes, ancora="#divisao")
+
+
+@contas_bp.route("/pix", methods=["POST"])
+@exigir_cargo('financeiro')
+def mudar_pix():
+    """Chave pix de quem recebe o aluguel, mostrada pra todo mundo em Contas."""
+    chave = request.form.get("pix", "").strip()[:100]
+    conn = conectar_db()
+    conn.execute("INSERT OR REPLACE INTO config (chave, valor) VALUES ('pix_aluguel', ?)", (chave,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("contas.index", ok="Pix do aluguel salvo" if chave else "Pix do aluguel apagado"))
 
 
 # ---------- planilha do financeiro ----------

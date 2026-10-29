@@ -1,0 +1,37 @@
+{% if pix or pode('financeiro') %}
+<div class="card card-compacto" id="pix">
+    {% if pix %}
+    <div class="pix">
+        <span class="bolha">{{ icone('carteira') }}</span>
+        <span class="item-texto">
+            <span class="item-sub">Pix do aluguel</span>
+            <strong class="pix-chave">{{ pix }}</strong>
+        </span>
+        <button type="button" class="btn-claro btn-pequeno" data-copiar="{{ pix }}">{{ icone('copiar') }} Copiar</button>
+    </div>
+    {% endif %}
+    {% if pode('financeiro') %}
+    <details class="detalhe-gastos"{% if not pix %} open{% endif %}>
+        <summary>{{ 'Trocar a chave pix' if pix else 'Chave pix do aluguel' }}</summary>
+        <form action="{{ url_for('contas.mudar_pix') }}" method="POST" class="form-row" style="margin-top: 8px;">
+            <input type="text" name="pix" value="{{ pix }}" placeholder="E-mail, CPF ou telefone" maxlength="100" style="flex: 1; min-width: 0;">
+            <button type="submit" class="btn-claro btn-pequeno">Salvar</button>
+        </form>
+    </details>
+    {% endif %}
+</div>
+<script>
+document.querySelectorAll('[data-copiar]').forEach(function (botao) {
+    botao.addEventListener('click', function () {
+        var texto = botao.dataset.copiar, rotulo = botao.innerHTML;
+        function feito() { botao.textContent = 'Copiado!'; setTimeout(function () { botao.innerHTML = rotulo; }, 1500); }
+        if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(texto).then(feito); return; }
+        var campo = document.createElement('textarea');  // http na rede de casa: clipboard API não existe
+        campo.value = texto; campo.style.position = 'fixed'; campo.style.opacity = '0';
+        document.body.appendChild(campo); campo.select();
+        try { document.execCommand('copy'); feito(); } catch (e) {}
+        document.body.removeChild(campo);
+    });
+});
+</script>
+{% endif %}

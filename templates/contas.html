@@ -50,6 +50,8 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
 </div>
 {% endif %}
 
+{% include "_pix.html" %}
+
 {% for a in avisos %}
 <div class="alerta">{{ icone('alerta') }}<p>{{ a }}</p></div>
 {% endfor %}

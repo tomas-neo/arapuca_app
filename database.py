@@ -184,12 +184,26 @@ def inicializar_db():
         # Mesmas escalas da planilha "Funções - Arapuca"
         padrao = [("Limpeza", "", ["Cozinha", "Garagem"]),
                   ("Passeio do Buddha", "", ["Passeio"]),
-                  ("Lavar roupa", "", ["1ª máquina", "2ª máquina"])]
+                  ("Lavar roupa", "", ["Máquina"])]
         for nome, icone, linhas in padrao:
             escala_id = conn.execute('INSERT INTO escalas (nome, icone, prazo_dias) VALUES (?, ?, ?)',
                                      (nome, icone, 1 if nome == "Limpeza" else 0)).lastrowid
             conn.executemany('INSERT INTO escala_linhas (escala_id, nome) VALUES (?, ?)',
                              [(escala_id, linha) for linha in linhas])
+
+    # A casa tem uma máquina só: junta 1ª e 2ª máquina numa linha "Máquina" (uma vez)
+    if not conn.execute("SELECT 1 FROM config WHERE chave = 'maquina_unica_em'").fetchone():
+        lavar = conn.execute("SELECT id FROM escalas WHERE nome = 'Lavar roupa'").fetchone()
+        linhas = [l[0] for l in conn.execute('SELECT id FROM escala_linhas WHERE escala_id = ? ORDER BY nome',
+                                              (lavar[0],))] if lavar else []
+        if linhas:
+            fica, sobram = linhas[0], linhas[1:]
+            for linha in sobram:
+                conn.execute('INSERT OR IGNORE INTO escala_turnos (linha_id, dia, morador_id) '
+                             'SELECT ?, dia, morador_id FROM escala_turnos WHERE linha_id = ?', (fica, linha))
+                conn.execute('DELETE FROM escala_linhas WHERE id = ?', (linha,))
+            conn.execute("UPDATE escala_linhas SET nome = 'Máquina' WHERE id = ?", (fica,))
+        conn.execute("INSERT INTO config (chave, valor) VALUES ('maquina_unica_em', datetime('now', 'localtime'))")
 
     # Pontos de azaralho: prato sujo, função ou passeio do Buddha não feito...
     conn.execute('''
