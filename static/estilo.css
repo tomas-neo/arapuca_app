@@ -444,7 +444,7 @@ details.card > summary::-webkit-details-marker { display: none; }
 .form-busca { align-items: flex-start; }
 .form-busca .busca { margin-bottom: 0; }
 .form-busca .resultados { margin: 6px 0 0; }
-.item-row > .foto-mini { flex: 0 0 32px; width: 32px; }
+.item-row > .foto-mini, .item-row > .foto-mini:first-child { flex: 0 0 32px; width: 32px; }
 .resultados li small { white-space: nowrap; }
 .item-row.quebra .item-texto { flex: 1 1 90px; min-width: 90px; }
 .item-row.quebra .item-titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -473,3 +473,6 @@ details.card > summary::-webkit-details-marker { display: none; }
 .funca .dica { margin: 6px 0 0; }
 details.card > summary { cursor: pointer; list-style: none; }
 details.card > summary::-webkit-details-marker { display: none; }
+.mes-vazio { width: 34px; height: 34px; }
+.detalhe-gastos { border-top: 1px solid var(--linha); padding-top: 10px; margin-top: 10px; }
+.detalhe-gastos summary { cursor: pointer; font-weight: 500; }

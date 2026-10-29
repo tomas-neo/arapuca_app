@@ -1,0 +1,28 @@
+<details class="card" id="planilha-financeiro"{% if sync and sync.erro %} open{% endif %}>
+    <summary><h3 style="display: inline-flex; margin: 0;">{{ icone('lista') }} Planilha do financeiro</h3></summary>
+    {% if sync and sync.arquivo %}
+    <p class="dica">As contas vêm da planilha do Drive{% if sync.em %}, lida pela última vez em {{ sync.em.strftime('%d/%m às %H:%M') }}{% endif %}. O app confere sozinho a cada hora.</p>
+    {% if sync.erro %}<div class="alerta alerta-critico">{{ icone('alerta') }}<p>Última leitura falhou: {{ sync.erro }}</p></div>{% endif %}
+    <form action="{{ url_for('contas.atualizar_planilha') }}" method="POST" style="margin-bottom: 10px;">
+        <input type="hidden" name="mes" value="{{ mes }}">
+        <button type="submit" class="btn-laranja">{{ icone('historico') }} Atualizar agora</button>
+    </form>
+    {% else %}
+    <p class="dica">Lance tudo na planilha Financeiro do Drive e o app mostra pra cada um a parte dele, os gastos e a dívida. Cole o link da planilha (do ano atual):</p>
+    {% endif %}
+    <form action="{{ url_for('contas.configurar_planilha') }}" method="POST">
+        <input type="text" name="link" class="campo" placeholder="Link da planilha no Drive" required>
+        <input type="text" name="ano" class="campo" placeholder="Ano da planilha (ex.: 2026)" inputmode="numeric" maxlength="4">
+        <button type="submit" class="btn-claro">{{ 'Trocar planilha' if sync and sync.arquivo else 'Ligar planilha' }}</button>
+    </form>
+    {% if sync and sync.email %}
+    <p class="dica">Compartilhe a planilha (como Leitor) com <strong>{{ sync.email }}</strong>. Ela continua privada.</p>
+    {% else %}
+    <p class="dica">Sem a conta de serviço do Google no servidor, a planilha precisa estar como "qualquer pessoa com o link pode ver".</p>
+    {% endif %}
+    {% if sync and sync.arquivo %}
+    <form action="{{ url_for('contas.desligar_planilha') }}" method="POST" onsubmit="return confirm('Voltar a lançar as contas no próprio app?')">
+        <button type="submit" class="btn-vermelho btn-pequeno">Desligar planilha</button>
+    </form>
+    {% endif %}
+</details>

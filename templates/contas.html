@@ -202,4 +202,8 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     {% endif %}
     {% endif %}
 </div>
+
+{% if pode('financeiro') %}
+{% include "_planilha_config.html" %}
+{% endif %}
 {% endblock %}
