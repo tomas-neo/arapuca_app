@@ -2,7 +2,7 @@
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
 from database import conectar_db
-from modulos.auth import somente_admin
+from modulos.auth import exigir_cargo, pode
 from modulos.mercado_itens import CATEGORIAS, LOCAIS, UNIDADES
 
 mercado_bp = Blueprint('mercado', __name__, url_prefix='/mercado')
@@ -166,13 +166,13 @@ def usar(item_id):
 
 @mercado_bp.route("/movimento/<int:mov_id>/desfazer", methods=["POST"])
 def desfazer(mov_id):
-    """Quem lançou (ou um admin) desfaz e o estoque volta."""
+    """Quem lançou (ou o cargo de mercado) desfaz e o estoque volta."""
     conn = conectar_db()
     mov = conn.execute('SELECT * FROM mercado_movimentos WHERE id = ?', (mov_id,)).fetchone()
     if mov is None:
         conn.close()
         abort(404)
-    if not g.morador['admin'] and mov['morador_id'] != g.morador['id']:
+    if not pode('mercado') and mov['morador_id'] != g.morador['id']:
         conn.close()
         abort(403)
     sinal = 1 if mov['tipo'] == "uso" else -1
@@ -185,7 +185,7 @@ def desfazer(mov_id):
 
 
 @mercado_bp.route("/itens/novo", methods=["POST"])
-@somente_admin
+@exigir_cargo('mercado')
 def novo_item():
     nome = request.form.get("nome", "").strip()
     local = request.form.get("local", "Mercado")
@@ -213,7 +213,7 @@ def novo_item():
 
 
 @mercado_bp.route("/itens/<int:item_id>/remover", methods=["POST"])
-@somente_admin
+@exigir_cargo('mercado')
 def remover_item(item_id):
     conn = conectar_db()
     conn.execute('UPDATE mercado_itens SET ativo = 0 WHERE id = ?', (item_id,))

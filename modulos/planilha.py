@@ -131,8 +131,8 @@ def sincronizar(baixar=baixar_aba):
         conn = conectar_db()
         try:
             planilha = ler_config(conn, "planilha_funcoes", PLANILHA_PADRAO)
-            moradores = {normalizar(m["apelido"]): m["id"]
-                         for m in conn.execute("SELECT id, apelido FROM moradores WHERE ativo = 1")}
+            from modulos.casa import mapa_moradores
+            moradores = mapa_moradores(conn)  # inclui Mic, Xupeta... do dados_iniciais/
             erros, nao_achados = [], set()
             for escala_nome, gid, rotulo, prazo in ABAS:
                 try:
@@ -142,6 +142,9 @@ def sincronizar(baixar=baixar_aba):
                     continue
                 if grade is None:
                     erros.append(f"{escala_nome}: não achei os dias da semana na aba")
+                    continue
+                if not any(nomes for dias in grade.values() for nomes in dias.values()):
+                    erros.append(f"{escala_nome}: aba sem ninguém escalado, mantive a do app")
                     continue
                 nao_achados |= aplicar(conn, escala_nome, prazo, grade, moradores)
             salvar_config(conn, escalas_sync_em=datetime.now().isoformat(timespec="minutes"),

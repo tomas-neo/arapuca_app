@@ -10,12 +10,13 @@ from flask import Flask, g, render_template, send_from_directory
 from werkzeug.security import generate_password_hash
 
 from database import conectar_db, inicializar_db
-from modulos.auth import auth_bp
+from modulos.auth import CARGOS, auth_bp, pode
 from modulos.azaralho import azaralho_bp, meus_pontos_do_mes
 from modulos.boiler import boiler_bp
 from modulos.contas import contas_bp
 from modulos.icones import ICONE_MOTIVO, avatar, icone, icone_escala
 from modulos.escalas import escalas_bp, minhas_funcoes
+from modulos.funcas import funcas_bp, funcas_do_morador
 from modulos.mercado import formatar_qtd, mercado_bp
 from modulos import casa, planilha
 from modulos.moradores import moradores_bp
@@ -40,7 +41,8 @@ app.config.update(
     SECRET_KEY=carregar_chave_secreta(),
     PERMANENT_SESSION_LIFETIME=timedelta(days=365),  # celular fica logado; renova a cada acesso
     MAX_CONTENT_LENGTH=12 * 1024 * 1024,  # foto de perfil
-    SINCRONIZAR_PLANILHA=os.environ.get("ARAPUCA_SINCRONIZAR", "1") == "1",  # escalas da planilha do Drive
+    # escalas: quem manda é o app (o cargo de estrutura edita lá); a planilha só entra pelo botão
+    SINCRONIZAR_PLANILHA=os.environ.get("ARAPUCA_SINCRONIZAR", "0") == "1",
     AZARALHO_ATIVO=os.environ.get("ARAPUCA_AZARALHO", "0") == "1",  # em quarentena por enquanto
     BOILER_ATIVO=os.environ.get("ARAPUCA_BOILER", "0") == "1",  # em breve
     SESSION_COOKIE_SAMESITE="Lax",
@@ -52,12 +54,13 @@ casa.importar(_conn)  # ano, saldo da planilha e fotos de dados_iniciais/ (fora 
 _conn.close()
 app.jinja_env.filters['qtd'] = formatar_qtd
 app.jinja_env.filters['ano'] = casa.formatar_ano
-app.jinja_env.globals.update(avatar=avatar, icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
+app.jinja_env.globals.update(pode=pode, cargos_nomes=CARGOS, avatar=avatar, icone=icone, icone_escala=icone_escala, icone_motivo=ICONE_MOTIVO)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(moradores_bp)
 app.register_blueprint(contas_bp)
 app.register_blueprint(escalas_bp)
+app.register_blueprint(funcas_bp)
 app.register_blueprint(mercado_bp)
 app.register_blueprint(boiler_bp)
 app.register_blueprint(azaralho_bp)
@@ -72,14 +75,17 @@ def service_worker():
 @app.route("/")
 def home():
     planilha.sincronizar_se_preciso(app.config["SINCRONIZAR_PLANILHA"])
-    return render_template("home.html", tarefas=minhas_funcoes(g.morador["id"]),
+    conn = conectar_db()
+    minhas_funcas = funcas_do_morador(conn, g.morador["id"])
+    conn.close()
+    return render_template("home.html", tarefas=minhas_funcoes(g.morador["id"]), minhas_funcas=minhas_funcas,
                            meus_pontos=meus_pontos_do_mes(g.morador["id"]) if app.config["AZARALHO_ATIVO"] else 0)
 
 
 @app.cli.command("criar-admin")
 @click.argument("apelido")
 def criar_admin(apelido):
-    """Cria um morador admin. Uso: flask --app app criar-admin Oca"""
+    """Cria um morador root (acesso total). Uso: flask --app app criar-admin Oca"""
     senha = getpass.getpass("Senha: ")
     if len(senha) < 6:
         raise click.ClickException("A senha precisa de 6 caracteres ou mais")
@@ -97,7 +103,7 @@ def criar_admin(apelido):
         raise click.ClickException(f"Já existe um morador chamado {apelido}")
     finally:
         conn.close()
-    click.echo(f"Admin {apelido} criado. Agora é só entrar pelo app.")
+    click.echo(f"Root {apelido} criado. Agora é só entrar pelo app.")
 
 
 if __name__ == "__main__":

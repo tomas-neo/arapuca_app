@@ -80,6 +80,29 @@ def inicializar_db():
         conn.execute('ALTER TABLE moradores ADD COLUMN ano INTEGER')
     if 'saldo_anterior_centavos' not in colunas:
         conn.execute('ALTER TABLE moradores ADD COLUMN saldo_anterior_centavos INTEGER')
+    # Cargos dados pelo root (admin = root, acesso total): "financeiro,mercado,estrutura".
+    # NULL = nunca definido (dados_iniciais/ pode preencher); '' = sem cargo.
+    if 'cargos' not in colunas:
+        conn.execute('ALTER TABLE moradores ADD COLUMN cargos TEXT')
+    # 1 = ainda usa a senha inicial (apelido@ano); o app pede para trocar
+    if 'senha_padrao' not in colunas:
+        conn.execute('ALTER TABLE moradores ADD COLUMN senha_padrao INTEGER NOT NULL DEFAULT 0')
+
+    # Funças: os grupos de trabalho da casa (Financeiro, Estrutura, Buda...) e quem está em cada um
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS funcas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            descricao TEXT NOT NULL DEFAULT ''
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS funca_membros (
+            funca_id INTEGER NOT NULL REFERENCES funcas(id) ON DELETE CASCADE,
+            morador_id INTEGER NOT NULL REFERENCES moradores(id) ON DELETE CASCADE,
+            PRIMARY KEY (funca_id, morador_id)
+        )
+    ''')
 
     # Contas da casa lançadas em cada mês (valores em centavos para não errar arredondamento).
     # tipo: 'aluguel' (vai metade área comum, metade quartos) ou 'despesa' (igual por vaga)

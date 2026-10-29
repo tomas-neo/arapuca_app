@@ -62,7 +62,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
         <span><span class="rotulo">Aluguel da rep</span><strong>{{ total_aluguel|reais }}</strong></span>
         <span class="bolha">{{ icone('casa') }}</span>
     </div>
-    {% if g.morador.admin and not fechado and alugueis %}
+    {% if pode('financeiro') and not fechado and alugueis %}
     <ul class="lista">
         {% for c in alugueis %}
         <li class="item-row"><span class="item-texto"><span class="item-sub">{{ c.descricao }}</span></span>
@@ -79,7 +79,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
         <li class="item-row">
             <span class="item-texto"><span class="item-titulo">{{ c.descricao }}</span></span>
             <span class="item-valor">{{ c.valor_centavos|reais }}</span>
-            {% if g.morador.admin and not fechado %}
+            {% if pode('financeiro') and not fechado %}
             <form action="{{ url_for('contas.apagar', conta_id=c.id, mes=mes) }}" method="POST">
                 <button type="submit" class="btn-vermelho btn-icone" title="Apagar" aria-label="Apagar {{ c.descricao }}">{{ icone('lixo') }}</button>
             </form>
@@ -93,7 +93,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     <p class="total">Gastos <strong>{{ total_despesas|reais }}</strong> · Total <strong>{{ (total_aluguel + total_despesas)|reais }}</strong></p>
     {% endif %}
 
-    {% if g.morador.admin and not fechado %}
+    {% if pode('financeiro') and not fechado %}
     <hr>
     <form action="{{ url_for('contas.nova', mes=mes) }}" method="POST">
         <div class="form-row">
@@ -117,7 +117,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
             <span class="item-texto"><span class="item-titulo">{{ a.apelido }}</span>
                 <span class="item-sub">{{ tipos_ajuste[a.tipo] }}{% if a.descricao != tipos_ajuste[a.tipo] %} · {{ a.descricao }}{% endif %}</span></span>
             <span class="item-valor {{ 'saldo-positivo' if a.tipo == 'desconto' }}">{{ '−' if a.tipo == 'desconto' else '+' }}{{ a.valor_centavos|reais }}</span>
-            {% if g.morador.admin and not fechado %}
+            {% if pode('financeiro') and not fechado %}
             <form action="{{ url_for('contas.apagar_ajuste', ajuste_id=a.id, mes=mes) }}" method="POST">
                 <button type="submit" class="btn-vermelho btn-icone" title="Apagar" aria-label="Apagar ajuste">{{ icone('lixo') }}</button>
             </form>
@@ -127,7 +127,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
         <p class="vazio">Nenhum ajuste nesse mês.</p>
     {% endfor %}
     </ul>
-    {% if g.morador.admin and not fechado %}
+    {% if pode('financeiro') and not fechado %}
     <hr>
     <form action="{{ url_for('contas.novo_ajuste', mes=mes) }}" method="POST">
         <div class="form-row">
@@ -162,10 +162,10 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
             </span>
             <span style="text-align: right;">
                 <span class="item-valor">{{ l.total_centavos|reais }}</span>
-                {% if fechado and l.morador_id and not g.morador.admin %}<br>{{ status_pago(l) }}{% endif %}
+                {% if fechado and l.morador_id and not pode('financeiro') %}<br>{{ status_pago(l) }}{% endif %}
             </span>
         </li>
-        {% if fechado and l.morador_id and g.morador.admin %}
+        {% if fechado and l.morador_id and pode('financeiro') %}
         <li class="item-row" style="border-bottom: 1px solid var(--linha); padding-top: 0;">
             {{ status_pago(l) }}
             {% set quitado = l.pago_centavos >= l.total_centavos %}
@@ -187,7 +187,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     <p class="total">Soma <strong>{{ linhas|sum(attribute='total_centavos')|reais }}</strong></p>
     {% endif %}
 
-    {% if g.morador.admin %}
+    {% if pode('financeiro') %}
     <hr>
     {% if fechado %}
     <form action="{{ url_for('contas.reabrir', mes=mes) }}" method="POST"
@@ -202,4 +202,8 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
     {% endif %}
     {% endif %}
 </div>
+
+{% if pode('financeiro') %}
+{% include "_planilha_config.html" %}
+{% endif %}
 {% endblock %}

@@ -10,6 +10,11 @@
 </div>
 {% endblock %}
 {% block conteudo %}
+{% if g.morador.senha_padrao %}
+<a href="{{ url_for('auth.trocar_senha') }}" class="alerta alerta-critico" style="text-decoration: none;">
+    {{ icone('cadeado') }}<p>Você ainda usa a senha inicial, que todo mundo sabe montar. Toque aqui e troque.</p>
+</a>
+{% endif %}
 <div class="card">
     <h3>{{ icone('calendario') }} Suas funções hoje</h3>
     <ul class="lista">
@@ -23,6 +28,10 @@
         <p class="vazio">Nada pra hoje. Folga.</p>
     {% endfor %}
     </ul>
+    {% if minhas_funcas %}
+    <hr>
+    <p class="dica" style="margin: 0;">Suas funças: <strong>{{ minhas_funcas|join(' · ') }}</strong></p>
+    {% endif %}
     {% if meus_pontos %}
     <hr>
     <a href="{{ url_for('azaralho.index') }}" class="alerta alerta-critico" style="margin: 0; text-decoration: none;">

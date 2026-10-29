@@ -5,7 +5,8 @@ from datetime import date
 from flask import Blueprint, abort, g, redirect, render_template, request, url_for
 
 from database import conectar_db
-from modulos.auth import somente_admin
+from modulos import financeiro
+from modulos.auth import exigir_cargo
 
 contas_bp = Blueprint('contas', __name__, url_prefix='/contas')
 
@@ -188,10 +189,32 @@ def saldo_acumulado(conn, morador_id):
         (morador_id,)).fetchone()[0]
 
 
+def pagina_planilha(conn):
+    """Contas vindas da planilha do financeiro: o app só mostra o que está lá."""
+    financeiro.sincronizar_se_preciso()
+    dados = financeiro.carregar(conn)
+    meses = sorted(dados.get("meses", {}))
+    mes = request.values.get("mes") or date.today().strftime("%Y-%m")
+    if not mes_valido(mes):
+        abort(400)
+    if meses and mes not in meses and not request.values.get("mes"):
+        mes = max([m for m in meses if m <= mes] or meses)  # mês atual ainda sem aba: o último que tem
+    info = financeiro.montar_mes(conn, dados, mes, g.morador['id'])
+    sync = financeiro.status(conn)
+    conn.close()
+    anterior = max([m for m in meses if m < mes], default=None)
+    proximo = min([m for m in meses if m > mes], default=None)
+    return render_template("contas_planilha.html", mes=mes, nome_mes=nome_mes(mes), info=info, sync=sync,
+                           anterior=anterior, proximo=proximo, erro=request.args.get("erro", ""),
+                           ok=request.args.get("ok", ""))
+
+
 @contas_bp.route("/")
 def index():
-    mes = mes_da_url()
     conn = conectar_db()
+    if financeiro.arquivo_configurado(conn):
+        return pagina_planilha(conn)
+    mes = mes_da_url()
     contas = conn.execute(
         'SELECT id, descricao, tipo, valor_centavos FROM contas WHERE mes = ? ORDER BY tipo, id', (mes,)
     ).fetchall()
@@ -202,6 +225,7 @@ def index():
     fotos = {m['id']: m['foto_versao'] for m in conn.execute('SELECT id, foto_versao FROM moradores')}
     saldo_anterior = conn.execute('SELECT COALESCE(saldo_anterior_centavos, 0) FROM moradores WHERE id = ?',
                                   (g.morador['id'],)).fetchone()[0]
+    sync = financeiro.status(conn)
     conn.close()
 
     minha_parte = next((l for l in linhas if l['morador_id'] == g.morador['id']), None)
@@ -215,7 +239,7 @@ def index():
         linhas=linhas, avisos=avisos, fechado=fechado,
         minha_parte=minha_parte, meu_saldo=meu_saldo, saldo_anterior=saldo_anterior, fotos=fotos,
         ajustes=lista_ajustes, tipos_ajuste=TIPOS_AJUSTE, moradores=moradores,
-        erro=request.args.get("erro", ""),
+        erro=request.args.get("erro", ""), sync=sync,
     )
 
 
@@ -232,7 +256,7 @@ def bloquear_se_fechado(conn, mes):
 
 
 @contas_bp.route("/nova", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def nova():
     mes = mes_da_url()
     descricao = request.form.get("descricao", "").strip()
@@ -256,7 +280,7 @@ def nova():
 
 
 @contas_bp.route("/<int:conta_id>/apagar", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def apagar(conta_id):
     mes = mes_da_url()
     conn = conectar_db()
@@ -269,7 +293,7 @@ def apagar(conta_id):
 
 
 @contas_bp.route("/ajuste", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def novo_ajuste():
     mes = mes_da_url()
     tipo = request.form.get("tipo", "")
@@ -295,7 +319,7 @@ def novo_ajuste():
 
 
 @contas_bp.route("/ajuste/<int:ajuste_id>/apagar", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def apagar_ajuste(ajuste_id):
     mes = mes_da_url()
     conn = conectar_db()
@@ -308,7 +332,7 @@ def apagar_ajuste(ajuste_id):
 
 
 @contas_bp.route("/fechar", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def fechar():
     """Congela a divisão do mês com os quartos, moradores e valores de agora."""
     mes = mes_da_url()
@@ -330,7 +354,7 @@ def fechar():
 
 
 @contas_bp.route("/reabrir", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def reabrir():
     mes = mes_da_url()
     conn = conectar_db()
@@ -341,7 +365,7 @@ def reabrir():
 
 
 @contas_bp.route("/pagamento/<int:vaga>", methods=["POST"])
-@somente_admin
+@exigir_cargo('financeiro')
 def registrar_pagamento(vaga):
     """Guarda quanto o morador daquela vaga pagou no mês (vazio ou 'tudo' = valor cheio)."""
     mes = mes_da_url()
@@ -364,3 +388,47 @@ def registrar_pagamento(vaga):
     conn.commit()
     conn.close()
     return voltar(mes, ancora="#divisao")
+
+
+# ---------- planilha do financeiro ----------
+
+@contas_bp.route("/planilha", methods=["POST"])
+@exigir_cargo('financeiro')
+def configurar_planilha():
+    """Liga a leitura da planilha: link do arquivo no Drive e o ano dele."""
+    arquivo_id = financeiro.id_do_link(request.form.get("link", ""))
+    ano = request.form.get("ano", "").strip()
+    if not arquivo_id:
+        return redirect(url_for("contas.index", erro="Não reconheci esse link. Cole o link da planilha no Drive."))
+    if ano and not (ano.isdigit() and 2020 <= int(ano) <= 2100):
+        return redirect(url_for("contas.index", erro="Ano inválido"))
+    conn = conectar_db()
+    financeiro.salvar_config(conn, financeiro_arquivo_id=arquivo_id, financeiro_ano=ano)
+    conn.commit()
+    conn.close()
+    erro = financeiro.sincronizar()
+    if erro:
+        return redirect(url_for("contas.index", erro=f"Salvei o link, mas não consegui ler a planilha: {erro}"))
+    return redirect(url_for("contas.index", ok="Planilha ligada. As contas agora vêm dela."))
+
+
+@contas_bp.route("/planilha/atualizar", methods=["POST"])
+@exigir_cargo('financeiro')
+def atualizar_planilha():
+    erro = financeiro.sincronizar()
+    mes = request.form.get("mes", "")
+    destino = {"mes": mes} if mes_valido(mes) else {}
+    if erro:
+        return redirect(url_for("contas.index", erro=f"Não consegui ler a planilha: {erro}", **destino))
+    return redirect(url_for("contas.index", ok="Atualizado com a planilha", **destino))
+
+
+@contas_bp.route("/planilha/desligar", methods=["POST"])
+@exigir_cargo('financeiro')
+def desligar_planilha():
+    """Volta para as contas lançadas no próprio app."""
+    conn = conectar_db()
+    conn.execute("DELETE FROM config WHERE chave IN ('financeiro_arquivo_id', 'financeiro_ano')")
+    conn.commit()
+    conn.close()
+    return redirect(url_for("contas.index"))

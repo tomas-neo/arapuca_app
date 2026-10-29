@@ -5,7 +5,7 @@ from werkzeug.security import generate_password_hash
 
 from database import conectar_db
 from modulos import casa
-from modulos.auth import somente_admin
+from modulos.auth import CARGOS, ler_cargos, somente_admin
 from modulos.contas import formatar, ler_valor
 
 moradores_bp = Blueprint('moradores', __name__, url_prefix='/moradores')
@@ -16,7 +16,7 @@ moradores_bp = Blueprint('moradores', __name__, url_prefix='/moradores')
 def index():
     erro = request.args.get('erro', '')
     conn = conectar_db()
-    moradores = conn.execute('SELECT id, apelido, admin, ativo, quarto_id, foto_versao, ano, saldo_anterior_centavos FROM moradores ORDER BY ativo DESC, apelido').fetchall()
+    moradores = conn.execute('SELECT id, apelido, admin, ativo, quarto_id, foto_versao, ano, saldo_anterior_centavos, cargos FROM moradores ORDER BY ativo DESC, apelido').fetchall()
     quartos = conn.execute(
         '''SELECT q.id, q.nome, q.ponderacao, q.vagas,
                   (SELECT COUNT(*) FROM moradores m WHERE m.quarto_id = q.id AND m.ativo = 1) AS ocupantes
@@ -25,7 +25,8 @@ def index():
     conn.close()
 
     soma = sum(q['ponderacao'] for q in quartos)
-    return render_template("moradores.html", moradores=moradores, quartos=quartos, erro=erro,
+    moradores = [dict(m, cargos=ler_cargos(m['cargos'])) for m in moradores]
+    return render_template("moradores.html", moradores=moradores, cargos=CARGOS, quartos=quartos, erro=erro,
                            soma_ponderacao=soma, total_vagas=sum(max(q['vagas'], q['ocupantes']) for q in quartos),
                            caixinha=formatar(int(cfg.get('caixinha_centavos', 5000))),
                            fracao_comum=round(float(cfg.get('fracao_area_comum', 0.5)) * 100))
@@ -117,6 +118,21 @@ def mudar_dados(morador_id):
         saldo = 0
     conn = conectar_db()
     conn.execute('UPDATE moradores SET ano = ?, saldo_anterior_centavos = ? WHERE id = ?', (ano, saldo, morador_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('moradores.index'))
+
+
+@moradores_bp.route("/<int:morador_id>/cargos", methods=["POST"])
+@somente_admin
+def mudar_cargos(morador_id):
+    """Só o root dá e tira cargos (financeiro, mercado, estrutura) e passa o root."""
+    cargos = [c for c in CARGOS if request.form.get(f'cargo_{c}')]
+    root = 1 if request.form.get('root') else 0
+    if morador_id == g.morador['id']:
+        root = 1  # o root não se rebaixa sozinho, senão a casa fica sem root
+    conn = conectar_db()
+    conn.execute('UPDATE moradores SET cargos = ?, admin = ? WHERE id = ?', (",".join(cargos), root, morador_id))
     conn.commit()
     conn.close()
     return redirect(url_for('moradores.index'))

@@ -20,58 +20,145 @@
 </ul>
 {% endmacro %}
 
+{% macro escolher_morador(nome='morador_id', rotulo='+ pessoa') %}
+<select name="{{ nome }}" required onchange="this.form.submit()" aria-label="Adicionar pessoa" class="select-mini">
+    <option value="" disabled selected>{{ rotulo }}</option>
+    {% for m in moradores %}<option value="{{ m.id }}">{{ m.apelido }}</option>{% endfor %}
+</select>
+{% endmacro %}
+
 <div class="card">
     <h3>{{ icone('certo') }} Suas funções</h3>
     {{ lista_funcoes(funcoes) }}
     <p class="dica" style="margin: 10px 0 0;">Limpeza pode ser feita no dia ou no seguinte. Máquina e passeio do Buddha são só no dia.</p>
 </div>
 
-<div class="card">
-    <h3>{{ icone('casa') }} Na casa</h3>
+<div class="card{{ ' editando' if editar }}" id="na-casa">
+    <h3>{{ icone('casa') }} Na casa
+        {% if pode('estrutura') %}
+        <a href="{{ url_for('escalas.index', aba=aba) if editar else url_for('escalas.index', editar=1, aba=aba) }}" class="etiqueta" style="margin-left: auto; text-decoration: none;">
+            {{ icone('certo' if editar else 'lapis') }} {{ 'Pronto' if editar else 'Editar' }}</a>
+        {% endif %}
+    </h3>
+    {% if editar %}<p class="dica" style="margin-top: 0;">Escolha o dia, toque no × pra tirar alguém e use "+ pessoa" pra escalar. Vale pra esse dia da semana, toda semana.</p>{% endif %}
     <div class="dias" role="tablist">
         {% for d in dias %}
-        <button type="button" class="dia-aba{{ ' ativa' if loop.first }}" data-dia="{{ loop.index0 }}" role="tab">
+        <button type="button" class="dia-aba{{ ' ativa' if loop.index0 == aba }}" data-dia="{{ loop.index0 }}" role="tab">
             <strong>{{ d.rotulo }}</strong><small>{{ d.data }}</small>
         </button>
         {% endfor %}
     </div>
     {% for d in dias %}
-    <div class="dia-painel" data-dia="{{ loop.index0 }}"{% if not loop.first %} hidden{% endif %}>
+    {% set aba_d = loop.index0 %}
+    <div class="dia-painel" data-dia="{{ aba_d }}"{% if aba_d != aba %} hidden{% endif %}>
         {% for grupo in d.grupos %}
         <div class="grupo">
             <div class="grupo-titulo">{{ icone(icone_escala(grupo.escala)) }} {{ grupo.escala }}</div>
-            {% for linha, turnos in grupo.linhas.items() %}
+            {% set ocupadas = grupo.linhas|selectattr('turnos')|list %}
+            {% for linha in (grupo.linhas if editar else ocupadas) %}
             <div class="escala-linha">
-                <span class="escala-area">{{ linha }}</span>
+                <span class="escala-area">{{ linha.nome }}</span>
                 <span class="escala-nomes">
-                    <span class="rostos">{% for t in turnos %}{{ avatar(t.morador_id, t.apelido, t.foto_versao, 'foto-mini') }}{% endfor %}</span>
-                    <span>{% for t in turnos %}<span class="{{ 'eu' if t.morador_id == g.morador.id }}">{{ t.apelido }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</span>
+                    {% if editar %}
+                    {% for t in linha.turnos %}
+                    <form action="{{ url_for('escalas.remover_turno') }}" method="POST" class="chip">
+                        <input type="hidden" name="linha_id" value="{{ linha.id }}"><input type="hidden" name="dia" value="{{ d.dia }}">
+                        <input type="hidden" name="morador_id" value="{{ t.morador_id }}"><input type="hidden" name="aba" value="{{ aba_d }}">
+                        {{ t.apelido }}<button type="submit" class="chip-x" aria-label="Tirar {{ t.apelido }}">{{ icone('fechar') }}</button>
+                    </form>
+                    {% endfor %}
+                    <form action="{{ url_for('escalas.adicionar_turno') }}" method="POST">
+                        <input type="hidden" name="linha_id" value="{{ linha.id }}"><input type="hidden" name="dia" value="{{ d.dia }}">
+                        <input type="hidden" name="aba" value="{{ aba_d }}">
+                        {{ escolher_morador() }}
+                    </form>
+                    {% else %}
+                    <span class="rostos">{% for t in linha.turnos %}{{ avatar(t.morador_id, t.apelido, t.foto_versao, 'foto-mini') }}{% endfor %}</span>
+                    <span>{% for t in linha.turnos %}<span class="{{ 'eu' if t.morador_id == g.morador.id }}">{{ t.apelido }}</span>{% if not loop.last %}, {% endif %}{% endfor %}</span>
+                    {% endif %}
                 </span>
             </div>
             {% else %}
             <div class="escala-linha"><span class="escala-area apagado">Ninguém escalado</span></div>
             {% endfor %}
+            {% if editar %}
+            <details class="editar-linhas">
+                <summary>Áreas de {{ grupo.escala|lower }}</summary>
+                {% for linha in grupo.linhas %}
+                <form action="{{ url_for('escalas.apagar_linha', linha_id=linha.id) }}" method="POST" class="chip" onsubmit="return confirm('Apagar {{ linha.nome }} de todos os dias?')">
+                    <input type="hidden" name="aba" value="{{ aba_d }}">{{ linha.nome }}<button type="submit" class="chip-x" aria-label="Apagar {{ linha.nome }}">{{ icone('fechar') }}</button>
+                </form>
+                {% endfor %}
+                <form action="{{ url_for('escalas.adicionar_linha', escala_id=grupo.id) }}" method="POST" class="form-row" style="margin-top: 8px;">
+                    <input type="hidden" name="aba" value="{{ aba_d }}">
+                    <input type="text" name="nome" placeholder="Nova área (ex.: Cozinha)" maxlength="30" required style="flex: 1; min-width: 0;">
+                    <button type="submit" class="btn-claro btn-pequeno">{{ icone('mais') }}</button>
+                </form>
+            </details>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
     {% endfor %}
 </div>
 
-{% if g.morador.admin %}
-<div class="card">
-    <h3>{{ icone('lista') }} Planilha "Funções - Arapuca"</h3>
-    <p class="dica">
-        {% if sync.em %}Atualizado em {{ sync.em.strftime('%d/%m às %H:%M') }}. O app confere a planilha sozinho a cada hora.
-        {% else %}Ainda não puxei a planilha.{% endif %}
-    </p>
-    {% if sync.erro %}<div class="alerta alerta-critico">{{ icone('alerta') }}<p>{{ sync.erro }}</p></div>{% endif %}
-    {% if sync.nao_achados %}
-    <div class="alerta">{{ icone('alerta') }}<p>Nomes da planilha sem morador no app: {{ sync.nao_achados|join(', ') }}. Crie o morador com o mesmo apelido.</p></div>
-    {% endif %}
-    <form action="{{ url_for('escalas.sincronizar') }}" method="POST">
-        <button type="submit" class="btn-claro">{{ icone('historico') }} Atualizar agora</button>
+<div class="card{{ ' editando' if editar }}" id="funcas">
+    <h3>{{ icone('pessoas') }} Funças da casa</h3>
+    {% for f in funcas %}
+    <details class="funca"{% if g.morador.id in f.membros|map(attribute='id') %} open{% endif %}>
+        <summary>
+            <span class="funca-nome">{{ f.nome }}</span>
+            <span class="rostos">{% for m in f.membros[:5] %}{{ avatar(m.id, m.apelido, m.foto_versao, 'foto-mini') }}{% endfor %}</span>
+        </summary>
+        {% if f.descricao %}<p class="dica">{{ f.descricao }}</p>{% endif %}
+        <div class="chips">
+            {% for m in f.membros %}
+            {% if editar %}
+            <form action="{{ url_for('funcas.remover_membro', funca_id=f.id, morador_id=m.id) }}" method="POST" class="chip">
+                {{ m.apelido }}<button type="submit" class="chip-x" aria-label="Tirar {{ m.apelido }}">{{ icone('fechar') }}</button>
+            </form>
+            {% else %}
+            <span class="chip {{ 'chip-meu' if m.id == g.morador.id }}">{{ m.apelido }}</span>
+            {% endif %}
+            {% else %}
+            <span class="apagado">Ninguém ainda</span>
+            {% endfor %}
+            {% if editar %}
+            <form action="{{ url_for('funcas.adicionar_membro', funca_id=f.id) }}" method="POST">{{ escolher_morador() }}</form>
+            {% endif %}
+        </div>
+        {% if editar %}
+        <form action="{{ url_for('funcas.apagar', funca_id=f.id) }}" method="POST" onsubmit="return confirm('Apagar a funça {{ f.nome }}?')" style="margin-top: 8px;">
+            <button type="submit" class="btn-vermelho btn-pequeno">{{ icone('lixo') }} Apagar funça</button>
+        </form>
+        {% endif %}
+    </details>
+    {% else %}
+    <p class="vazio">Nenhuma funça cadastrada.</p>
+    {% endfor %}
+    {% if editar %}
+    <form action="{{ url_for('funcas.nova') }}" method="POST" class="form-row" style="margin-top: 12px;">
+        <input type="text" name="nome" placeholder="Nova funça" maxlength="40" required style="flex: 1; min-width: 0;">
+        <button type="submit" class="btn-claro btn-pequeno">{{ icone('mais') }} Criar</button>
     </form>
+    {% elif pode('estrutura') %}
+    <a href="{{ url_for('escalas.index', editar=1) }}#funcas" class="dica">Editar funças</a>
+    {% endif %}
 </div>
+
+{% if pode('estrutura') %}
+<details class="card">
+    <summary><h3 style="display: inline-flex; margin: 0;">{{ icone('lista') }} Puxar da planilha do Drive</h3></summary>
+    <p class="dica">As escalas ficam salvas no app e quem tem o cargo de estrutura muda aqui. A planilha "Funções - Arapuca" só entra se você apertar o botão, e só nas abas que tiverem gente escalada (aba vazia não apaga nada).</p>
+    {% if sync.em %}<p class="dica">Última vez: {{ sync.em.strftime('%d/%m às %H:%M') }}.</p>{% endif %}
+    {% if sync.erro %}<div class="alerta">{{ icone('alerta') }}<p>{{ sync.erro }}</p></div>{% endif %}
+    {% if sync.nao_achados %}
+    <div class="alerta">{{ icone('alerta') }}<p>Nomes da planilha sem morador no app: {{ sync.nao_achados|join(', ') }}.</p></div>
+    {% endif %}
+    <form action="{{ url_for('escalas.sincronizar') }}" method="POST" onsubmit="return confirm('Substituir as escalas do app pelo que está na planilha?')">
+        <button type="submit" class="btn-claro">{{ icone('historico') }} Puxar agora</button>
+    </form>
+</details>
 {% endif %}
 
 <script>

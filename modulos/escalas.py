@@ -4,8 +4,9 @@ from datetime import date, timedelta
 from flask import Blueprint, abort, current_app, g, redirect, render_template, request, url_for
 
 from database import conectar_db
-from modulos.auth import somente_admin
+from modulos.auth import exigir_cargo, pode
 from modulos import planilha
+from modulos.funcas import listar_funcas
 
 escalas_bp = Blueprint('escalas', __name__, url_prefix='/escalas')
 
@@ -61,22 +62,27 @@ def minhas_funcoes(morador_id, hoje=None):
 
 
 def proximos_dias(conn, hoje, quantos=7):
-    """Os próximos dias com quem faz o quê, agrupado por escala e linha."""
+    """Os próximos dias com quem faz o quê, agrupado por escala e linha (linhas vazias também,
+    para quem edita poder escalar alguém nelas)."""
     escalas = conn.execute('SELECT id, nome FROM escalas ORDER BY id').fetchall()
+    linhas = conn.execute('SELECT id, escala_id, nome FROM escala_linhas ORDER BY id').fetchall()
     dias = []
     for i in range(quantos):
         data = hoje + timedelta(days=i)
-        turnos = turnos_do_dia(conn, dia_da_semana(data))
+        dia = dia_da_semana(data)
+        turnos = conn.execute(
+            '''SELECT t.linha_id, m.id AS morador_id, m.apelido, m.foto_versao
+               FROM escala_turnos t JOIN moradores m ON m.id = t.morador_id
+               WHERE t.dia = ? AND m.ativo = 1 ORDER BY m.apelido''', (dia,)).fetchall()
         grupos = []
         for e in escalas:
-            linhas = {}
-            for t in turnos:
-                if t['escala'] == e['nome']:
-                    linhas.setdefault(t['linha'], []).append(t)
-            grupos.append({'escala': e['nome'], 'linhas': linhas})
-        rotulo = "Hoje" if i == 0 else "Amanhã" if i == 1 else DIAS_CURTOS[dia_da_semana(data)]
-        dias.append({'rotulo': rotulo, 'curto': DIAS_CURTOS[dia_da_semana(data)],
-                     'data': data.strftime("%d/%m"), 'nome': DIAS[dia_da_semana(data)], 'grupos': grupos})
+            grupo_linhas = [{'id': l['id'], 'nome': l['nome'],
+                             'turnos': [t for t in turnos if t['linha_id'] == l['id']]}
+                            for l in linhas if l['escala_id'] == e['id']]
+            grupos.append({'id': e['id'], 'escala': e['nome'], 'linhas': grupo_linhas})
+        rotulo = "Hoje" if i == 0 else "Amanhã" if i == 1 else DIAS_CURTOS[dia]
+        dias.append({'rotulo': rotulo, 'curto': DIAS_CURTOS[dia], 'dia': dia,
+                     'data': data.strftime("%d/%m"), 'nome': DIAS[dia], 'grupos': grupos})
     return dias
 
 
@@ -106,13 +112,25 @@ def index():
     conn = conectar_db()
     dias = proximos_dias(conn, date.today())
     sync = planilha.status(conn)
+    funcas = listar_funcas(conn)
+    moradores = conn.execute('SELECT id, apelido FROM moradores WHERE ativo = 1 ORDER BY apelido').fetchall()
     conn.close()
+    aba = request.args.get('aba', '0')
+    editar = pode('estrutura') and request.args.get('editar') == '1'
     return render_template("escalas.html", dias=dias, funcoes=minhas_funcoes(g.morador['id']),
-                           sync=sync, erro=request.args.get('erro', ''), ok=request.args.get('ok', ''))
+                           sync=sync, funcas=funcas, moradores=moradores, editar=editar,
+                           aba=int(aba) if aba.isdigit() and int(aba) < len(dias) else 0,
+                           erro=request.args.get('erro', ''), ok=request.args.get('ok', ''))
+
+
+def voltar_editando(ancora=""):
+    """Volta pra tela de escalas no mesmo dia e com a edição aberta."""
+    aba = request.form.get('aba', '0')
+    return redirect(url_for('escalas.index', editar=1, aba=aba if aba.isdigit() else 0) + ancora)
 
 
 @escalas_bp.route("/sincronizar", methods=["POST"])
-@somente_admin
+@exigir_cargo('estrutura')
 def sincronizar():
     resultado = planilha.sincronizar()
     if resultado['erros']:
@@ -131,7 +149,7 @@ def ler_int(nome, minimo=None, maximo=None):
 
 
 @escalas_bp.route("/turno", methods=["POST"])
-@somente_admin
+@exigir_cargo('estrutura')
 def adicionar_turno():
     linha_id = ler_int('linha_id')
     dia = ler_int('dia', 0, 6)
@@ -145,11 +163,11 @@ def adicionar_turno():
         abort(400)  # linha ou morador que não existe
     finally:
         conn.close()
-    return redirect(url_for('escalas.index') + f"#escala-{request.form.get('escala_id', '')}")
+    return voltar_editando()
 
 
 @escalas_bp.route("/turno/remover", methods=["POST"])
-@somente_admin
+@exigir_cargo('estrutura')
 def remover_turno():
     linha_id = ler_int('linha_id')
     dia = ler_int('dia', 0, 6)
@@ -159,38 +177,38 @@ def remover_turno():
                  (linha_id, dia, morador_id))
     conn.commit()
     conn.close()
-    return redirect(url_for('escalas.index') + f"#escala-{request.form.get('escala_id', '')}")
+    return voltar_editando()
 
 
 @escalas_bp.route("/<int:escala_id>/linha", methods=["POST"])
-@somente_admin
+@exigir_cargo('estrutura')
 def adicionar_linha(escala_id):
     nome = request.form.get('nome', '').strip()
     if not nome or len(nome) > 30:
-        return redirect(url_for('escalas.index', erro="Nome da linha inválido (até 30 letras)"))
+        return redirect(url_for('escalas.index', editar=1, erro="Nome da linha inválido (até 30 letras)"))
     conn = conectar_db()
     try:
         conn.execute('INSERT INTO escala_linhas (escala_id, nome) VALUES (?, ?)', (escala_id, nome))
         conn.commit()
     except sqlite3.IntegrityError:
-        return redirect(url_for('escalas.index', erro=f"Essa escala já tem \"{nome}\""))
+        return redirect(url_for('escalas.index', editar=1, erro=f"Essa escala já tem \"{nome}\""))
     finally:
         conn.close()
-    return redirect(url_for('escalas.index') + f"#escala-{escala_id}")
+    return voltar_editando()
 
 
 @escalas_bp.route("/linha/<int:linha_id>/apagar", methods=["POST"])
-@somente_admin
+@exigir_cargo('estrutura')
 def apagar_linha(linha_id):
     conn = conectar_db()
     conn.execute('DELETE FROM escala_linhas WHERE id = ?', (linha_id,))  # turnos saem junto (cascade)
     conn.commit()
     conn.close()
-    return redirect(url_for('escalas.index'))
+    return voltar_editando()
 
 
 @escalas_bp.route("/nova", methods=["POST"])
-@somente_admin
+@exigir_cargo('estrutura')
 def nova_escala():
     nome = request.form.get('nome', '').strip()
     icone = ''  # o ícone sai do nome da escala (modulos/icones.py)

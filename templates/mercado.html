@@ -34,7 +34,7 @@
             <span class="item-titulo">{{ h.nome }} <span class="apagado">{{ '−' if h.tipo == 'uso' else '+' }}{{ h.quantidade|qtd }} {{ h.unidade }}</span></span>
             <span class="item-sub">{{ tipos[h.tipo] }} · {{ h.apelido or '—' }} · {{ h.criado_em[8:10] }}/{{ h.criado_em[5:7] }} {{ h.criado_em[11:16] }}</span>
         </span>
-        {% if g.morador.admin or h.morador_id == g.morador.id %}
+        {% if pode('mercado') or h.morador_id == g.morador.id %}
         <form action="{{ url_for('mercado.desfazer', mov_id=h.id) }}" method="POST"
               onsubmit="return confirm('Desfazer esse lançamento? O estoque volta como estava.');">
             <input type="hidden" name="aba" value="{{ aba }}">
@@ -126,7 +126,7 @@
         <div class="barra-fixa"><button type="submit" class="btn-laranja">Registrar compra</button></div>
     </form>
 
-    {% if g.morador.admin %}
+    {% if pode('mercado') %}
     <details class="card">
         <summary><h3 style="margin: 0;">{{ icone('lapis') }} Itens da lista</h3></summary>
         <form action="{{ url_for('mercado.novo_item') }}" method="POST" style="margin-top: 14px;">

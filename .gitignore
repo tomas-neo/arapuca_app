@@ -29,3 +29,6 @@ fotos/
 
 # Fotos, anos e saldos de cada morador (repositório é público)
 dados_iniciais/
+
+# Chave da conta de serviço do Google (planilha do financeiro)
+credenciais/

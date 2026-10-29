@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 {% block titulo %}Sem permissão{% endblock %}
-{% block titulo_topo %}Só admin{% endblock %}
+{% block titulo_topo %}{{ 'Só ' ~ cargo if cargo else 'Só root' }}{% endblock %}
 {% block conteudo %}
 <div class="card centro">
     <span class="bolha bolha-perigo" style="margin-bottom: 10px;">{{ icone('cadeado') }}</span>
-    <p>Essa página é só para quem administra o app.</p>
+    {% if cargo %}
+    <p>Isso é com quem tem o cargo de {{ cargo }}. Quem distribui os cargos é o root.</p>
+    {% else %}
+    <p>Isso é só com o root, o admin geral da casa.</p>
+    {% endif %}
     <a href="{{ url_for('home') }}" class="botao btn-claro" style="margin-top: 10px;">Voltar ao início</a>
 </div>
 {% endblock %}

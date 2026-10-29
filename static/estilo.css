@@ -444,9 +444,35 @@ details.card > summary::-webkit-details-marker { display: none; }
 .form-busca { align-items: flex-start; }
 .form-busca .busca { margin-bottom: 0; }
 .form-busca .resultados { margin: 6px 0 0; }
-.item-row > .foto-mini { flex: 0 0 32px; width: 32px; }
+.item-row > .foto-mini, .item-row > .foto-mini:first-child { flex: 0 0 32px; width: 32px; }
 .resultados li small { white-space: nowrap; }
 .item-row.quebra .item-texto { flex: 1 1 90px; min-width: 90px; }
 .item-row.quebra .item-titulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item-row.quebra .peso-form { flex: 0 1 128px; min-width: 0; }
 .item-row.quebra .peso-form select { width: 100%; }
+.cargos-form { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 10px 0 0; }
+.cargos-form .checkbox { margin: 0; font-size: 14px; }
+.cargos-form button { margin-left: auto; }
+
+/* ---------- escalas editáveis e funças ---------- */
+.card h3 .etiqueta .ic { width: 14px; height: 14px; }
+.select-mini { padding: 4px 8px; font-size: 13px; border-radius: 999px; width: auto; max-width: 120px; }
+.editando .escala-linha { align-items: flex-start; }
+.editando .escala-nomes { gap: 4px; }
+.editando .escala-nomes form { margin: 0; }
+.escala-nomes .chip { font-size: 13px; padding: 3px 8px; }
+.editar-linhas { margin: 6px 0 0; }
+.editar-linhas summary { font-size: 12px; color: var(--texto-suave); cursor: pointer; margin-bottom: 6px; }
+.editar-linhas .chip { display: inline-flex; margin: 0 4px 4px 0; }
+.funca { border-bottom: 1px solid var(--linha); padding: 10px 0; }
+.funca:last-of-type { border-bottom: 0; }
+.funca summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none; }
+.funca summary::-webkit-details-marker { display: none; }
+.funca-nome { font-weight: 600; }
+.funca .chips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.funca .dica { margin: 6px 0 0; }
+details.card > summary { cursor: pointer; list-style: none; }
+details.card > summary::-webkit-details-marker { display: none; }
+.mes-vazio { width: 34px; height: 34px; }
+.detalhe-gastos { border-top: 1px solid var(--linha); padding-top: 10px; margin-top: 10px; }
+.detalhe-gastos summary { cursor: pointer; font-weight: 500; }

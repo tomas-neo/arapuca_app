@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_macros.html" import erro as mostrar_erro %}
+{% macro item_gasto(it, com_status=False) %}
+<li class="item-row">
+    <span class="item-texto">
+        <span class="item-titulo">{{ it.descricao }}</span>
+        {% set extra = [it.data, it.responsavel, ('parcela ' ~ it.parcela) if it.parcela else ''] | select | join(' · ') %}
+        {% if extra %}<span class="item-sub">{{ extra }}</span>{% endif %}
+    </span>
+    {% if com_status and it.status %}<span class="etiqueta {{ 'etiqueta-ok' if 'pag' in it.status|lower and 'pend' not in it.status|lower }}">{{ it.status }}</span>{% endif %}
+    <span class="item-valor">{{ it.valor|reais }}</span>
+</li>
+{% endmacro %}
+{% block titulo %}Contas{% endblock %}
+{% block subtitulo %}{% if info and info.minha %}Sua parte do mês{% else %}Contas da casa{% endif %}{% endblock %}
+{% block titulo_topo %}{% if info and info.minha %}{{ info.minha.total|reais }}{% else %}Contas e aluguel{% endif %}{% endblock %}
+{% block topo_extra %}
+<div class="mes-nav">
+    {% if anterior %}<a href="{{ url_for('contas.index', mes=anterior) }}" aria-label="Mês anterior">{{ icone('voltar') }}</a>{% else %}<span class="mes-vazio"></span>{% endif %}
+    <strong>{{ nome_mes }}</strong>
+    {% if proximo %}<a href="{{ url_for('contas.index', mes=proximo) }}" aria-label="Próximo mês">{{ icone('seguir') }}</a>{% else %}<span class="mes-vazio"></span>{% endif %}
+</div>
+{% endblock %}
+{% block conteudo %}
+{{ mostrar_erro(erro) }}
+{% if ok %}<div class="alerta alerta-ok">{{ icone('certo') }}<p>{{ ok }}</p></div>{% endif %}
+
+{% if info is none %}
+<div class="card">
+    <p class="vazio">{% if sync.em %}A planilha não tem a aba de {{ nome_mes|lower }}.{% else %}Ainda não consegui ler a planilha do financeiro.{% endif %}</p>
+</div>
+{% else %}
+
+{% if info.divida is not none %}
+<div class="card card-compacto">
+    <div class="divida {{ 'divida-deve' if info.divida < 0 else 'divida-ok' }}">
+        <span class="bolha {{ 'bolha-perigo' if info.divida < 0 else 'bolha-ok' }}">{{ icone('alerta' if info.divida < 0 else 'certo') }}</span>
+        <span class="item-texto">
+            <span class="item-sub">{% if info.divida > 0 %}A rep te deve{% else %}Sua dívida com a rep{% endif %}</span>
+            <strong>{{ info.divida|abs|reais if info.divida else 'Nada, tudo certo' }}</strong>
+        </span>
+    </div>
+    <p class="dica" style="margin: 10px 0 0;">Saldo da aba Créditos da planilha do financeiro.</p>
+</div>
+{% endif %}
+
+{% if info.minha %}
+{% set m = info.minha %}
+<div class="card">
+    <ul class="lista">
+        <li class="item-row"><span class="apagado">Casa (aluguel)</span><span class="item-valor">{{ m.casa|reais }}</span></li>
+        <li class="item-row"><span class="apagado">Despesas</span><span class="item-valor">{{ m.despesas|reais }}</span></li>
+        {% if m.outros %}<li class="item-row"><span class="apagado">Outros</span><span class="item-valor">{{ m.outros|reais }}</span></li>{% endif %}
+        {% if m.pendencias %}<li class="item-row"><span class="apagado">Pendências</span><span class="item-valor">{{ m.pendencias|reais }}</span></li>{% endif %}
+        <li class="item-row"><span class="apagado">Caixinha</span><span class="item-valor">{{ m.caixinha|reais }}</span></li>
+        {% if m.desconto %}<li class="item-row"><span class="apagado">Desconto</span><span class="item-valor saldo-positivo">−{{ m.desconto|abs|reais }}</span></li>{% endif %}
+    </ul>
+    <hr>
+    <div class="form-row" style="justify-content: space-between; margin: 0;">
+        {% if m.pagou >= m.total and m.total > 0 %}<span class="etiqueta etiqueta-ok">{{ icone('certo') }} Pago</span>
+        {% elif m.pagou > 0 %}<span class="etiqueta">Pagou {{ m.pagou|reais }}</span>
+        {% else %}<span class="etiqueta etiqueta-perigo">Em aberto</span>{% endif %}
+        <span class="dica">Quarto {{ m.quarto }}</span>
+    </div>
+</div>
+{% else %}
+<div class="alerta">{{ icone('alerta') }}<p>Não achei você na aba de {{ nome_mes|lower }}. Confira com o financeiro se o seu nome na planilha bate com o seu apelido.</p></div>
+{% endif %}
+
+<div class="card">
+    <h3>{{ icone('recibo') }} Gastos da casa</h3>
+    <ul class="lista">
+        {% for it in info.mensalidades.itens %}{{ item_gasto(it, True) }}{% endfor %}
+    </ul>
+    <p class="total">Total <strong>{{ info.mensalidades.total|reais }}</strong></p>
+    {% for q in info.detalhes %}
+    <details class="detalhe-gastos">
+        <summary>{{ q.titulo|replace('Detalhamento ', '') }} <span class="apagado">· {{ q.itens|length }} itens · {{ q.total|reais }}</span></summary>
+        <ul class="lista">{% for it in q.itens %}{{ item_gasto(it) }}{% endfor %}</ul>
+    </details>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h3>{{ icone('pessoas') }} Quanto cada um paga</h3>
+    <ul class="lista">
+    {% for l in info.linhas %}
+        <li class="item-row {% if l.morador_id == g.morador.id %}minha-linha{% endif %}">
+            {{ avatar(l.morador_id, l.nome, l.foto_versao, 'foto-mini') }}
+            <span class="item-texto"><span class="item-titulo">{{ l.nome }}</span><span class="item-sub">{{ l.quarto }}</span></span>
+            <span style="text-align: right;">
+                <span class="item-valor">{{ l.total|reais }}</span>
+                {% if l.pagou >= l.total and l.total > 0 %}<br><span class="etiqueta etiqueta-ok">Pago</span>
+                {% elif l.pagou > 0 %}<br><span class="etiqueta">Pagou {{ l.pagou|reais }}</span>{% endif %}
+            </span>
+        </li>
+    {% endfor %}
+    </ul>
+    <p class="total">Soma <strong>{{ info.total_aluguel|reais }}</strong></p>
+</div>
+{% endif %}
+
+<p class="dica centro">Valores da planilha do financeiro{% if sync.em %}, lida em {{ sync.em.strftime('%d/%m às %H:%M') }}{% endif %}. Pra corrigir algo, fale com o financeiro.</p>
+
+{% if pode('financeiro') %}
+{% include "_planilha_config.html" %}
+{% endif %}
+{% endblock %}
