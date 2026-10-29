@@ -73,7 +73,7 @@ def test_contas_criadas_com_senha_inicial(app):
 def test_escalas_e_funcas_iniciais(app):
     turnos = sql("""SELECT l.nome, t.dia, m.apelido FROM escala_turnos t JOIN escala_linhas l ON l.id = t.linha_id
                     JOIN moradores m ON m.id = t.morador_id ORDER BY t.dia""")
-    assert [tuple(t) for t in turnos] == [("1ª máquina", 0, "Zangado"), ("1ª máquina", 1, "Chupeta")]  # Xupeta = Chupeta
+    assert [tuple(t) for t in turnos] == [("Máquina", 0, "Zangado"), ("Máquina", 1, "Chupeta")]  # Xupeta = Chupeta
     assert {l[0] for l in sql("SELECT nome FROM escala_linhas")} >= {"Cozinha", "Sala"}
     membros = sql("""SELECT f.nome, m.apelido FROM funca_membros fm JOIN funcas f ON f.id = fm.funca_id
                      JOIN moradores m ON m.id = fm.morador_id WHERE f.nome = 'Estrutura'""")

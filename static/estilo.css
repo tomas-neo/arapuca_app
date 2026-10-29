@@ -476,3 +476,9 @@ details.card > summary::-webkit-details-marker { display: none; }
 .mes-vazio { width: 34px; height: 34px; }
 .detalhe-gastos { border-top: 1px solid var(--linha); padding-top: 10px; margin-top: 10px; }
 .detalhe-gastos summary { cursor: pointer; font-weight: 500; }
+
+/* Pix do aluguel */
+.pix { display: flex; align-items: center; gap: 12px; }
+.pix .item-texto { flex: 1; min-width: 0; }
+.pix-chave { display: block; overflow-wrap: anywhere; font-size: 14px; }
+.pix .btn-pequeno { flex: 0 0 auto; }

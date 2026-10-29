@@ -29,6 +29,7 @@
 <div class="card">
     <p class="vazio">{% if sync.em %}A planilha não tem a aba de {{ nome_mes|lower }}.{% else %}Ainda não consegui ler a planilha do financeiro.{% endif %}</p>
 </div>
+{% include "_pix.html" %}
 {% else %}
 
 {% if info.divida is not none %}
@@ -66,6 +67,8 @@
 {% else %}
 <div class="alerta">{{ icone('alerta') }}<p>Não achei você na aba de {{ nome_mes|lower }}. Confira com o financeiro se o seu nome na planilha bate com o seu apelido.</p></div>
 {% endif %}
+
+{% include "_pix.html" %}
 
 <div class="card">
     <h3>{{ icone('recibo') }} Gastos da casa</h3>

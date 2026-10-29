@@ -88,7 +88,7 @@ def test_sincronizar_troca_escalas(app):
     cidao = conn.execute(
         """SELECT COUNT(*) FROM escala_turnos t JOIN escala_linhas l ON l.id = t.linha_id
            JOIN moradores m ON m.id = t.morador_id
-           WHERE l.nome = '2ª máquina' AND t.dia = 6 AND m.apelido = 'Cidão'""").fetchone()[0]
+           WHERE l.nome = 'Máquina' AND t.dia = 6 AND m.apelido = 'Cidão'""").fetchone()[0]
     assert cidao == 1   # "Cidão" da planilha casou com o morador (sem ligar pra acento/maiúscula)
     assert conn.execute("SELECT prazo_dias FROM escalas WHERE nome = 'Limpeza'").fetchone()[0] == 1
     conn.close()
@@ -101,7 +101,7 @@ def test_sincronizar_troca_escalas(app):
     resultado = planilha.sincronizar(baixar=falha)
     assert resultado["erros"] == ["Lavar roupa: OSError"]
     conn = conectar_db()
-    assert conn.execute("SELECT COUNT(*) FROM escala_linhas WHERE nome = '1ª máquina'").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM escala_linhas WHERE nome = 'Máquina'").fetchone()[0] == 1
     conn.close()
 
     admin = app.test_client()

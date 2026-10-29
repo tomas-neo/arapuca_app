@@ -93,8 +93,23 @@ def baixar_aba(planilha_id, gid, timeout=10):
         return list(csv.reader(io.StringIO(resposta.read().decode("utf-8"))))
 
 
+MAQUINA = "Máquina"
+
+
+def juntar_maquinas(grade):
+    """A casa tem uma máquina só: quem estava na 1ª e na 2ª máquina vai pra mesma linha."""
+    junta = {}
+    for dias in grade.values():
+        for dia, nomes in dias.items():
+            lista = junta.setdefault(dia, [])
+            lista.extend(n for n in nomes if n not in lista)
+    return {MAQUINA: junta}
+
+
 def aplicar(conn, escala_nome, prazo, grade, moradores):
     """Troca as linhas e turnos da escala pelo que veio da planilha. Devolve nomes não achados."""
+    if normalizar(escala_nome) == "lavar roupa" and grade:
+        grade = juntar_maquinas(grade)
     escala = conn.execute("SELECT id FROM escalas WHERE nome = ?", (escala_nome,)).fetchone()
     escala_id = escala["id"] if escala else conn.execute(
         "INSERT INTO escalas (nome, icone) VALUES (?, '')", (escala_nome,)).lastrowid

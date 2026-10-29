@@ -4,6 +4,7 @@ Pasta `dados_iniciais/` ao lado do app (fica fora do git):
     moradores.json   {"Oca": {"ano": 2025, "saldo": -824.99, "nomes": ["Cabeça Oca"], "cargos": ["mercado"]}, ...}
     fotos/Oca.jpg    foto de cada um, com o apelido no nome do arquivo
 
+    casa.json        {"pix_aluguel": "..."}: chave pix do aluguel (o financeiro troca no app)
     escalas.json     escalas iniciais (máquina, passeio, limpeza), entram uma vez só
     funcas.json      funças da casa e quem está em cada uma, entram uma vez só
 
@@ -145,7 +146,7 @@ def importar(conn, pasta=None):
                 conn.execute('UPDATE moradores SET foto_versao = ? WHERE id = ?', (int(time.time()), m['id']))
                 mudou += 1
     conn.commit()
-    mudou += importar_escalas(conn, pasta) + importar_funcas(conn, pasta)
+    mudou += importar_escalas(conn, pasta) + importar_funcas(conn, pasta) + importar_casa(conn, pasta)
     conn.commit()
     return mudou
 
@@ -183,6 +184,16 @@ def importar_escalas(conn, pasta=None):
         aplicar(conn, nome, int(escala.get("prazo", 0)), grade, moradores)
     marcar_importado(conn, "escalas_iniciais_em")
     return len(dados)
+
+
+def importar_casa(conn, pasta=None):
+    """casa.json: dados da casa que não vão pro GitHub. Só preenche o que o app ainda não tem."""
+    dados = ler_json(Path(pasta or PASTA_DADOS) / "casa.json")
+    pix = str(dados.get("pix_aluguel") or "").strip()[:100] if isinstance(dados, dict) else ""
+    if not pix or ja_importado(conn, "pix_aluguel"):
+        return 0
+    conn.execute("INSERT INTO config (chave, valor) VALUES ('pix_aluguel', ?)", (pix,))
+    return 1
 
 
 def importar_funcas(conn, pasta=None):
