@@ -1,3 +1,4 @@
+import threading
 import time
 from functools import wraps
 from pathlib import Path
@@ -91,6 +92,43 @@ def pagina_login(erro="", apelido="", proximo=""):
     return render_template("login.html", erro=erro, apelido=apelido, proximo=proximo)
 
 
+# Freio contra chute de senha: depois de 5 erros seguidos no mesmo usuário, espera 5 minutos
+TENTATIVAS_MAX = 5
+ESPERA_SEGUNDOS = 5 * 60
+_erros_login = {}  # usuário -> (erros seguidos, hora do último erro)
+_trava_login = threading.Lock()
+
+
+def bloqueado(chave):
+    with _trava_login:
+        erros, quando = _erros_login.get(chave, (0, 0))
+        if erros >= TENTATIVAS_MAX and time.time() - quando < ESPERA_SEGUNDOS:
+            return True
+        if erros >= TENTATIVAS_MAX:
+            _erros_login.pop(chave, None)  # já esperou: zera
+        return False
+
+
+def anotar_erro(chave):
+    with _trava_login:
+        if len(_erros_login) > 1000:  # alguém chutando nomes a esmo: não deixa a memória crescer
+            _erros_login.clear()
+        erros, _ = _erros_login.get(chave, (0, 0))
+        _erros_login[chave] = (erros + 1, time.time())
+
+
+def achar_por_login(conn, texto):
+    """Aceita o apelido do jeito que a pessoa digitar: Cidão, cidao, CIDAO ou "cidao " dão no mesmo."""
+    from modulos.casa import login_de
+    procurado = login_de(texto)
+    if not procurado:
+        return None
+    for m in conn.execute('SELECT id, apelido, senha_hash FROM moradores WHERE ativo = 1'):
+        if login_de(m['apelido']) == procurado:
+            return m
+    return None
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
@@ -102,14 +140,21 @@ def login():
     senha = request.form.get('senha', '')
     proximo = request.form.get('proximo', '')
 
+    from modulos.casa import login_de
+    chave = login_de(apelido)
+    if bloqueado(chave):
+        return pagina_login("Muitas tentativas erradas. Espere 5 minutos ou peça pro root resetar sua senha.",
+                            apelido, proximo), 429
+
     conn = conectar_db()
-    morador = conn.execute(
-        'SELECT id, senha_hash FROM moradores WHERE apelido = ? AND ativo = 1', (apelido,)
-    ).fetchone()
+    morador = achar_por_login(conn, apelido)
     conn.close()
 
     if morador is None or not check_password_hash(morador['senha_hash'], senha):
-        return pagina_login("Apelido ou senha errados", apelido, proximo), 401
+        anotar_erro(chave)
+        return pagina_login("Usuário ou senha errados", apelido, proximo), 401
+    with _trava_login:
+        _erros_login.pop(chave, None)
 
     session.clear()
     session.permanent = True  # continua logado no celular

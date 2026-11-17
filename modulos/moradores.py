@@ -15,6 +15,7 @@ moradores_bp = Blueprint('moradores', __name__, url_prefix='/moradores')
 @somente_admin
 def index():
     erro = request.args.get('erro', '')
+    ok = request.args.get('ok', '')
     conn = conectar_db()
     moradores = conn.execute('SELECT id, apelido, admin, ativo, quarto_id, foto_versao, ano, saldo_anterior_centavos, cargos FROM moradores ORDER BY ativo DESC, apelido').fetchall()
     quartos = conn.execute(
@@ -26,7 +27,7 @@ def index():
 
     soma = sum(q['ponderacao'] for q in quartos)
     moradores = [dict(m, cargos=ler_cargos(m['cargos'])) for m in moradores]
-    return render_template("moradores.html", moradores=moradores, cargos=CARGOS, quartos=quartos, erro=erro,
+    return render_template("moradores.html", moradores=moradores, cargos=CARGOS, quartos=quartos, erro=erro, ok=ok,
                            soma_ponderacao=soma, total_vagas=sum(max(q['vagas'], q['ocupantes']) for q in quartos),
                            caixinha=formatar(int(cfg.get('caixinha_centavos', 5000))),
                            fracao_comum=round(float(cfg.get('fracao_area_comum', 0.5)) * 100))
@@ -136,3 +137,23 @@ def mudar_cargos(morador_id):
     conn.commit()
     conn.close()
     return redirect(url_for('moradores.index'))
+
+
+@moradores_bp.route("/<int:morador_id>/senha", methods=["POST"])
+@somente_admin
+def resetar_senha(morador_id):
+    """Quem esqueceu a senha volta pra senha inicial (apelido@ano) e o app pede pra trocar."""
+    conn = conectar_db()
+    m = conn.execute('SELECT apelido, ano FROM moradores WHERE id = ?', (morador_id,)).fetchone()
+    if m is None:
+        conn.close()
+        return redirect(url_for('moradores.index', erro="Morador não encontrado"))
+    if not m['ano']:
+        conn.close()
+        return redirect(url_for('moradores.index', erro=f"Coloque o ano de {m['apelido']} antes de resetar a senha"))
+    senha = casa.senha_inicial(m['apelido'], m['ano'])
+    conn.execute('UPDATE moradores SET senha_hash = ?, senha_padrao = 1 WHERE id = ?',
+                 (generate_password_hash(senha), morador_id))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('moradores.index', ok=f"Senha de {m['apelido']} voltou para {senha}"))

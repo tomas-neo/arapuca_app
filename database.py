@@ -1,13 +1,15 @@
 import sqlite3
 
 def conectar_db():
-    conn = sqlite3.connect('arapuca.db')
+    # timeout: espera até 10 s se outra requisição estiver gravando, em vez de dar erro "database is locked"
+    conn = sqlite3.connect('arapuca.db', timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute('PRAGMA foreign_keys = ON')
     return conn
 
 def inicializar_db():
     conn = conectar_db()
+    conn.execute('PRAGMA journal_mode = WAL')  # leituras não travam enquanto alguém grava
     
     conn.execute('''
         CREATE TABLE IF NOT EXISTS mercado (
@@ -257,7 +259,7 @@ def inicializar_db():
     cursor_boiler = conn.execute('SELECT COUNT(*) FROM boiler')
     if cursor_boiler.fetchone()[0] == 0:
         # Iniciamos com a hora_ligado nula (NULL)
-        conn.execute('INSERT INTO boiler (id, status, responsavel, hora_ligado) VALUES (1, "DESLIGADO", "Ninguém", NULL)')
+        conn.execute("INSERT INTO boiler (id, status, responsavel, hora_ligado) VALUES (1, 'DESLIGADO', 'Ninguém', NULL)")
         
     conn.commit()
     conn.close()

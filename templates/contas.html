@@ -57,7 +57,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
 {% endfor %}
 
 <div class="card">
-    <h3>{{ icone('recibo') }} Aluguel da rep e gastos</h3>
+    <h2>{{ icone('recibo') }} Aluguel da rep e gastos</h2>
     {% set alugueis = contas|selectattr('tipo', 'equalto', 'aluguel')|list %}
     {% set gastos = contas|rejectattr('tipo', 'equalto', 'aluguel')|list %}
     <div class="aluguel-rep">
@@ -88,7 +88,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
             {% endif %}
         </li>
     {% else %}
-        <p class="vazio">Nenhum gasto lançado nesse mês.</p>
+        <li class="vazio">Nenhum gasto lançado nesse mês.</li>
     {% endfor %}
     </ul>
     {% if contas %}
@@ -112,7 +112,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
 </div>
 
 <div class="card" id="ajustes">
-    <h3>{{ icone('lapis') }} Ajustes individuais</h3>
+    <h2>{{ icone('lapis') }} Ajustes individuais</h2>
     <ul class="lista">
     {% for a in ajustes %}
         <li class="item-row">
@@ -126,7 +126,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
             {% endif %}
         </li>
     {% else %}
-        <p class="vazio">Nenhum ajuste nesse mês.</p>
+        <li class="vazio">Nenhum ajuste nesse mês.</li>
     {% endfor %}
     </ul>
     {% if pode('financeiro') and not fechado %}
@@ -151,7 +151,7 @@ casa {{ l.casa_centavos|reais }} + despesas {{ l.despesas_centavos|reais }} + ca
 </div>
 
 <div class="card" id="divisao">
-    <h3>{{ icone('pessoas') }} Quanto cada um paga</h3>
+    <h2>{{ icone('pessoas') }} Quanto cada um paga</h2>
     {% if not linhas %}
     <p class="vazio">Cadastre os quartos em Moradores para ver a divisão.</p>
     {% endif %}

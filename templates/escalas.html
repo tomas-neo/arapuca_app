@@ -15,7 +15,7 @@
         <span class="etiqueta {{ 'etiqueta-perigo' if f.urgente }}">{{ f.prazo }}</span>
     </li>
 {% else %}
-    <p class="vazio">Nada pra você hoje. Folga.</p>
+    <li class="vazio">Nada pra você hoje. Folga.</li>
 {% endfor %}
 </ul>
 {% endmacro %}
@@ -28,18 +28,18 @@
 {% endmacro %}
 
 <div class="card">
-    <h3>{{ icone('certo') }} Suas funções</h3>
+    <h2>{{ icone('certo') }} Suas funções</h2>
     {{ lista_funcoes(funcoes) }}
     <p class="dica" style="margin: 10px 0 0;">Limpeza pode ser feita no dia ou no seguinte. Máquina e passeio do Buddha são só no dia.</p>
 </div>
 
 <div class="card{{ ' editando' if editar }}" id="na-casa">
-    <h3>{{ icone('casa') }} Na casa
+    <h2>{{ icone('casa') }} Na casa
         {% if pode('estrutura') %}
         <a href="{{ url_for('escalas.index', aba=aba) if editar else url_for('escalas.index', editar=1, aba=aba) }}" class="etiqueta" style="margin-left: auto; text-decoration: none;">
             {{ icone('certo' if editar else 'lapis') }} {{ 'Pronto' if editar else 'Editar' }}</a>
         {% endif %}
-    </h3>
+    </h2>
     {% if editar %}<p class="dica" style="margin-top: 0;">Escolha o dia, toque no × pra tirar alguém e use "+ pessoa" pra escalar. Vale pra esse dia da semana, toda semana.</p>{% endif %}
     <div class="dias" role="tablist">
         {% for d in dias %}
@@ -103,7 +103,7 @@
 </div>
 
 <div class="card{{ ' editando' if editar }}" id="funcas">
-    <h3>{{ icone('pessoas') }} Funças da casa</h3>
+    <h2>{{ icone('pessoas') }} Funças da casa</h2>
     {% for f in funcas %}
     <details class="funca"{% if g.morador.id in f.membros|map(attribute='id') %} open{% endif %}>
         <summary>
@@ -148,7 +148,7 @@
 
 {% if pode('estrutura') %}
 <details class="card">
-    <summary><h3 style="display: inline-flex; margin: 0;">{{ icone('lista') }} Puxar da planilha do Drive</h3></summary>
+    <summary><h2 style="display: inline-flex; margin: 0;">{{ icone('lista') }} Puxar da planilha do Drive</h2></summary>
     <p class="dica">As escalas ficam salvas no app e quem tem o cargo de estrutura muda aqui. A planilha "Funções - Arapuca" só entra se você apertar o botão, e só nas abas que tiverem gente escalada (aba vazia não apaga nada).</p>
     {% if sync.em %}<p class="dica">Última vez: {{ sync.em.strftime('%d/%m às %H:%M') }}.</p>{% endif %}
     {% if sync.erro %}<div class="alerta">{{ icone('alerta') }}<p>{{ sync.erro }}</p></div>{% endif %}

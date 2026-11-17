@@ -20,7 +20,7 @@
     <p class="dica" style="margin: 0;">Você fica conectado neste aparelho. Só sai se apertar "Sair".</p>
 </div>
 <div class="card">
-    <h3>{{ icone('chave') }} Trocar senha</h3>
+    <h2>{{ icone('chave') }} Trocar senha</h2>
     {{ mostrar_erro(erro) }}
     {% if sucesso %}<div class="alerta alerta-ok">{{ icone('certo') }}<p>Senha trocada</p></div>{% endif %}
     <form action="{{ url_for('auth.trocar_senha') }}" method="POST">

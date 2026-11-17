@@ -1,5 +1,5 @@
 <details class="card" id="planilha-financeiro"{% if sync and sync.erro %} open{% endif %}>
-    <summary><h3 style="display: inline-flex; margin: 0;">{{ icone('lista') }} Planilha do financeiro</h3></summary>
+    <summary><h2 style="display: inline-flex; margin: 0;">{{ icone('lista') }} Planilha do financeiro</h2></summary>
     {% if sync and sync.arquivo %}
     <p class="dica">As contas vêm da planilha do Drive{% if sync.em %}, lida pela última vez em {{ sync.em.strftime('%d/%m às %H:%M') }}{% endif %}. O app confere sozinho a cada hora.</p>
     {% if sync.erro %}<div class="alerta alerta-critico">{{ icone('alerta') }}<p>Última leitura falhou: {{ sync.erro }}</p></div>{% endif %}
