@@ -1,14 +1,12 @@
 {% extends "base.html" %}
 {% block titulo %}Boiler{% endblock %}
 {% block subtitulo %}Água quente{% endblock %}
-{# Atualiza a tela sozinha a cada 30 s #}
-{% block head %}<meta http-equiv="refresh" content="30">{% endblock %}
 {% block conteudo %}
 <div class="card">
     {% if status == "LIGADO" %}
     <div class="boiler-estado">
         <span class="bolha {{ 'bolha-perigo' if minutos >= 20 }}">{{ icone('chama') }}</span>
-        <h3>Ligado há {{ minutos }} min</h3>
+        <h2>Ligado há {{ minutos }} min</h2>
         <p>Ligado por <strong>{{ responsavel }}</strong></p>
     </div>
     {% if minutos >= 20 %}
@@ -20,7 +18,7 @@
     {% else %}
     <div class="boiler-estado">
         <span class="bolha bolha-ok">{{ icone('energia') }}</span>
-        <h3>Desligado</h3>
+        <h2>Desligado</h2>
         <p>Último a usar: {{ responsavel }}</p>
     </div>
     <form action="{{ url_for('boiler.ligar') }}" method="POST">
@@ -28,4 +26,8 @@
     </form>
     {% endif %}
 </div>
+<script>
+// Atualiza a tela a cada 30 s, só enquanto ela está aberta na frente (não gasta bateria em segundo plano)
+setInterval(function () { if (document.visibilityState === 'visible') location.reload(); }, 30000);
+</script>
 {% endblock %}

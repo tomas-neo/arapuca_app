@@ -38,7 +38,7 @@ def ligar():
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     conn = conectar_db()
-    conn.execute('UPDATE boiler SET status = "LIGADO", responsavel = ?, hora_ligado = ? WHERE id = 1', (nome, agora))
+    conn.execute("UPDATE boiler SET status = 'LIGADO', responsavel = ?, hora_ligado = ? WHERE id = 1", (nome, agora))
     conn.commit()
     conn.close()
     return redirect(url_for('boiler.index'))
@@ -49,7 +49,7 @@ def desligar():
     boiler_info = conn.execute('SELECT responsavel FROM boiler WHERE id = 1').fetchone()
     ultimo = boiler_info['responsavel']
     
-    conn.execute('UPDATE boiler SET status = "DESLIGADO", responsavel = ?, hora_ligado = NULL WHERE id = 1', (ultimo,))
+    conn.execute("UPDATE boiler SET status = 'DESLIGADO', responsavel = ?, hora_ligado = NULL WHERE id = 1", (ultimo,))
     conn.commit()
     conn.close()
     return redirect(url_for('boiler.index'))

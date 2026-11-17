@@ -16,7 +16,7 @@
 </a>
 {% endif %}
 <div class="card">
-    <h3>{{ icone('calendario') }} Suas funções hoje</h3>
+    <h2>{{ icone('calendario') }} Suas funções hoje</h2>
     <ul class="lista">
     {% for t in tarefas %}
         <li class="item-row">
@@ -25,7 +25,7 @@
             <span class="etiqueta {{ 'etiqueta-perigo' if t.urgente }}">{{ t.prazo }}</span>
         </li>
     {% else %}
-        <p class="vazio">Nada pra hoje. Folga.</p>
+        <li class="vazio">Nada pra hoje. Folga.</li>
     {% endfor %}
     </ul>
     {% if minhas_funcas %}

@@ -43,7 +43,7 @@
         {% endif %}
     </li>
 {% else %}
-    <p class="vazio">Nada lançado ainda.</p>
+    <li class="vazio">Nada lançado ainda.</li>
 {% endfor %}
 </ul>
 {% endmacro %}
@@ -54,7 +54,7 @@
 
 {% if aba == 'estoque' %}
     <div class="card">
-        <h3>{{ icone('menos') }} Usar</h3>
+        <h2>{{ icone('menos') }} Usar</h2>
         <form action="{{ url_for('mercado.usar_escolhido') }}" method="POST" class="form-row form-busca">
             {{ seletor_item(itens) }}
             <input type="text" name="qtd" inputmode="decimal" value="1" aria-label="Quantidade" style="flex: 0 0 64px; text-align: center;">
@@ -64,7 +64,7 @@
 
     {% if faltando %}
     <div class="card">
-        <h3>{{ icone('carrinho') }} Pra comprar <span class="etiqueta etiqueta-perigo" style="margin-left: auto;">{{ faltando|length }}</span></h3>
+        <h2>{{ icone('carrinho') }} Pra comprar <span class="etiqueta etiqueta-perigo" style="margin-left: auto;">{{ faltando|length }}</span></h2>
         <div class="chips">
             {% for i in faltando %}
             <a href="#item-{{ i.id }}" class="chip {{ 'chip-perigo' if i.situacao == 'acabou' }}">{{ i.nome }}</a>
@@ -76,7 +76,7 @@
 
     {% for local, lista in grupos.items() %}
     <div class="card">
-        <h3>{{ icone('caixa') }} {{ local }}</h3>
+        <h2>{{ icone('caixa') }} {{ local }}</h2>
         <ul class="lista estoque">
         {% for i in lista %}
             <li class="item-row" id="item-{{ i.id }}">
@@ -99,20 +99,20 @@
     {% endfor %}
 
     <details class="card historico">
-        <summary><h3 style="margin: 0;">{{ icone('historico') }} Últimos lançamentos</h3></summary>
+        <summary><h2 style="margin: 0;">{{ icone('historico') }} Últimos lançamentos</h2></summary>
         <div style="margin-top: 12px;">{{ lista_historico(historico) }}</div>
     </details>
 
 {% elif aba == 'compra' %}
     <form action="{{ url_for('mercado.compra_mensal') }}" method="POST" id="form-compra">
         <div class="card">
-            <h3>{{ icone('carrinho') }} Compra do mês</h3>
+            <h2>{{ icone('carrinho') }} Compra do mês</h2>
             <p class="dica">Coloque só o que chegou. Em branco não entra. A sugestão é a quantidade de sempre da planilha.</p>
             <button type="button" class="btn-claro btn-pequeno" onclick="preencherPadrao()">Preencher com a quantidade de sempre</button>
         </div>
         {% for local, lista in grupos.items() %}
         <div class="card">
-            <h3>{{ icone('caixa') }} {{ local }}</h3>
+            <h2>{{ icone('caixa') }} {{ local }}</h2>
             {% for i in lista %}
             <div class="linha-compra">
                 <label for="qtd-{{ i.id }}">{{ i.nome }}{% if i.qtd_mensal %}<small>sempre {{ i.qtd_mensal|qtd }} {{ i.unidade }}</small>{% endif %}</label>
@@ -128,7 +128,7 @@
 
     {% if pode('mercado') %}
     <details class="card">
-        <summary><h3 style="margin: 0;">{{ icone('lapis') }} Itens da lista</h3></summary>
+        <summary><h2 style="margin: 0;">{{ icone('lapis') }} Itens da lista</h2></summary>
         <form action="{{ url_for('mercado.novo_item') }}" method="POST" style="margin-top: 14px;">
             <input type="text" name="nome" class="campo" placeholder="Nome (ex: Leite)" maxlength="40" required>
             <div class="form-row">
@@ -159,7 +159,7 @@
 
 {% else %}
     <div class="card">
-        <h3>{{ icone('mais') }} Repor</h3>
+        <h2>{{ icone('mais') }} Repor</h2>
         <form action="{{ url_for('mercado.reposicao') }}" method="POST" id="form-repor">
             <div id="linhas-repor">
                 <div class="form-row form-busca linha-repor">
@@ -172,7 +172,7 @@
         </form>
     </div>
     <div class="card">
-        <h3>{{ icone('historico') }} Últimas reposições</h3>
+        <h2>{{ icone('historico') }} Últimas reposições</h2>
         {{ lista_historico(historico) }}
     </div>
 {% endif %}

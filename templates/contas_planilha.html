@@ -71,7 +71,7 @@
 {% include "_pix.html" %}
 
 <div class="card">
-    <h3>{{ icone('recibo') }} Gastos da casa</h3>
+    <h2>{{ icone('recibo') }} Gastos da casa</h2>
     <ul class="lista">
         {% for it in info.mensalidades.itens %}{{ item_gasto(it, True) }}{% endfor %}
     </ul>
@@ -85,7 +85,7 @@
 </div>
 
 <div class="card">
-    <h3>{{ icone('pessoas') }} Quanto cada um paga</h3>
+    <h2>{{ icone('pessoas') }} Quanto cada um paga</h2>
     <ul class="lista">
     {% for l in info.linhas %}
         <li class="item-row {% if l.morador_id == g.morador.id %}minha-linha{% endif %}">

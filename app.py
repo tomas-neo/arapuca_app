@@ -66,6 +66,29 @@ app.register_blueprint(boiler_bp)
 app.register_blueprint(azaralho_bp)
 
 
+@app.after_request
+def cabecalhos_de_seguranca(resposta):
+    """Impede o app de abrir dentro de outro site e o navegador de "adivinhar" o tipo dos arquivos."""
+    resposta.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resposta.headers.setdefault("X-Frame-Options", "DENY")
+    resposta.headers.setdefault("Referrer-Policy", "same-origin")
+    if resposta.mimetype == "text/html":
+        resposta.headers.setdefault("Cache-Control", "no-store")  # dados de cada um não ficam no cache
+    return resposta
+
+
+@app.errorhandler(404)
+def nao_achei(_erro):
+    return render_template("erro.html", titulo="Página não encontrada",
+                           texto="Esse endereço não existe no app."), 404
+
+
+@app.errorhandler(500)
+def erro_interno(_erro):
+    return render_template("erro.html", titulo="Deu ruim",
+                           texto="Algo falhou do nosso lado. Tente de novo; se continuar, avise o root."), 500
+
+
 @app.route("/sw.js")
 def service_worker():
     # O service worker precisa ser servido na raiz para valer para o app inteiro
@@ -107,4 +130,14 @@ def criar_admin(apelido):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Modo debug só no PC de quem programa (ARAPUCA_DEBUG=1): na rede ele deixa qualquer um rodar código no servidor
+    if os.environ.get("ARAPUCA_DEBUG") == "1":
+        app.run(host="0.0.0.0", port=5000, debug=True)
+    else:
+        try:
+            from waitress import serve
+        except ImportError:
+            app.run(host="0.0.0.0", port=5000, threaded=True)
+        else:
+            print("Arapuca no ar em http://0.0.0.0:5000 (Ctrl+C para parar)")
+            serve(app, host="0.0.0.0", port=5000, threads=8)

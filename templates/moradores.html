@@ -3,8 +3,9 @@
 {% block titulo %}Moradores{% endblock %}
 {% block subtitulo %}Root{% endblock %}
 {% block conteudo %}
+{% if ok %}<div class="alerta alerta-ok">{{ icone('certo') }}<p>{{ ok }}</p></div>{% endif %}
 <div class="card">
-    <h3>{{ icone('mais') }} Novo morador</h3>
+    <h2>{{ icone('mais') }} Novo morador</h2>
     {{ mostrar_erro(erro) }}
     <form action="{{ url_for('moradores.novo') }}" method="POST">
         <input type="text" name="apelido" class="campo" placeholder="Apelido" required maxlength="40">
@@ -16,7 +17,7 @@
     <p class="dica">Passe a senha inicial para o morador e peça para ele trocar no Perfil. Se a foto, o ano e o saldo dele estiverem em <code>dados_iniciais/</code>, entram sozinhos.</p>
 </div>
 <div class="card">
-    <h3>{{ icone('pessoas') }} Na casa</h3>
+    <h2>{{ icone('pessoas') }} Na casa</h2>
     <p class="dica"><strong>Root</strong> mexe em tudo, inclusive moradores e quartos. <strong>Financeiro</strong> lança contas, ajustes e pagamentos e fecha o mês. <strong>Mercado</strong> cuida da lista de itens e desfaz lançamentos. <strong>Estrutura</strong> fica pro que vier da casa (boiler, manutenção).</p>
     <p class="dica">O saldo anterior é o que veio da aba Créditos da planilha Financeiro, antes do app. Os meses fechados no app somam em cima dele.</p>
     <ul class="lista">
@@ -57,6 +58,10 @@
                     <button type="submit" class="btn-claro btn-pequeno">Salvar cargos</button>
                 </form>
                 {% if m.id != g.morador.id %}
+                <form action="{{ url_for('moradores.resetar_senha', morador_id=m.id) }}" method="POST"
+                      onsubmit="return confirm('Voltar a senha de {{ m.apelido }} para a senha inicial?')" style="margin-bottom: 8px;">
+                    <button type="submit" class="btn-claro btn-pequeno">{{ icone('chave') }} Resetar senha</button>
+                </form>
                 <form action="{{ url_for('moradores.alternar_ativo', morador_id=m.id) }}" method="POST">
                     {% if m.ativo %}
                     <button type="submit" class="btn-vermelho btn-pequeno">Desativar (saiu da casa)</button>

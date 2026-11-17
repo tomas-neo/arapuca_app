@@ -7,7 +7,7 @@
 {{ mostrar_erro(erro) }}
 
 <div class="card">
-    <h3>{{ icone('medalha') }} Ranking do mês</h3>
+    <h2>{{ icone('medalha') }} Ranking do mês</h2>
     {% set com_pontos = ranking|selectattr('pontos')|list %}
     {% set zerados = ranking|rejectattr('pontos')|map(attribute='apelido')|list %}
     <ol class="lista">
@@ -26,7 +26,7 @@
 
 {% if cobrar %}
 <div class="card">
-    <h3>{{ icone('calendario') }} Funções de ontem e de hoje</h3>
+    <h2>{{ icone('calendario') }} Funções de ontem e de hoje</h2>
     <p class="dica">Alguém não fez? Um toque dá 1 ponto.</p>
     <ul class="lista">
     {% for c in cobrar %}
@@ -51,7 +51,7 @@
 {% endif %}
 
 <div class="card">
-    <h3>{{ icone('mais') }} Dar ponto</h3>
+    <h2>{{ icone('mais') }} Dar ponto</h2>
     <form action="{{ url_for('azaralho.novo') }}" method="POST">
         <div class="form-row">
             <select name="morador_id" aria-label="Quem" required style="flex: 1; min-width: 0;">
@@ -72,7 +72,7 @@
 </div>
 
 <div class="card">
-    <h3>{{ icone('historico') }} Histórico</h3>
+    <h2>{{ icone('historico') }} Histórico</h2>
     <ul class="lista">
     {% for h in historico %}
         <li class="item-row">
@@ -89,7 +89,7 @@
             {% endif %}
         </li>
     {% else %}
-        <p class="vazio">Nenhum ponto registrado.</p>
+        <li class="vazio">Nenhum ponto registrado.</li>
     {% endfor %}
     </ul>
 </div>
